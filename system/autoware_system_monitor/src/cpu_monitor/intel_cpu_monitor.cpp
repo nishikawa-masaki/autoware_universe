@@ -173,7 +173,7 @@ void CPUMonitor::getTemperatureFileNames()
       continue;
     }
 
-    cpu_temperature_info temperature;
+    CpuTemperatureInfo temperature;
     temperature.path_ = temperature_input;
     temperature.label_ = path.filename().generic_string();
 
@@ -190,7 +190,7 @@ void CPUMonitor::getTemperatureFileNames()
     temperatures_.push_back(temperature);
   }
 
-  std::sort(temperatures_.begin(), temperatures_.end(), [](const cpu_temperature_info & c1, const cpu_temperature_info & c2) {
+  std::sort(temperatures_.begin(), temperatures_.end(), [](const CpuTemperatureInfo & c1, const CpuTemperatureInfo & c2) {
     std::smatch match;
     const std::regex filter(".*temp(\\d+)_input");
     int n1 = 0;

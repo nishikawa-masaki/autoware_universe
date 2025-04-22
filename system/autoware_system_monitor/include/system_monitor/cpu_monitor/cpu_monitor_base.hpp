@@ -20,6 +20,8 @@
 #ifndef SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_
 #define SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_
 
+#include "system_monitor/cpu_monitor/cpu_information.hpp"
+
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include <tier4_external_api_msgs/msg/cpu_status.hpp>
@@ -29,30 +31,7 @@
 #include <map>
 #include <string>
 #include <vector>
-
-/**
- * @brief CPU temperature information
- */
-typedef struct cpu_temperature_info
-{
-  std::string label_;  //!< @brief cpu label
-  std::string path_;   //!< @brief sysfs path to cpu temperature
-
-  cpu_temperature_info() : label_(), path_() {}
-  cpu_temperature_info(const std::string & label, const std::string & path) : label_(label), path_(path) {}
-} cpu_temperature_info;
-
-/**
- * @brief CPU frequency information
- */
-typedef struct cpu_frequency_info
-{
-  int index_;         //!< @brief cpu index
-  std::string path_;  //!< @brief sysfs path to cpu frequency
-
-  cpu_frequency_info() : index_(0), path_() {}
-  cpu_frequency_info(int index, const std::string & path) : index_(index), path_(path) {}
-} cpu_frequency_info;
+#include <mutex>
 
 class CPUMonitorBase : public rclcpp::Node
 {
@@ -84,21 +63,8 @@ protected:
 
   /**
    * @brief check CPU temperature
-   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
-   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
-   * to pass diagnostic message updated in this function to diagnostic publish calls.
    */
-  virtual void checkTemperature(
-    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
-
-  /**
-   * @brief check CPU usage
-   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
-   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
-   * to pass diagnostic message updated in this function to diagnostic publish calls.
-   */
-  virtual void checkUsage(
-    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+  virtual void checkTemperature();
 
   /**
    * @brief convert Cpu Usage To diagnostic Level
@@ -108,8 +74,38 @@ protected:
    */
   virtual int CpuUsageToLevel(const std::string & cpu_name, float usage);
 
+#if 0
+  /**
+   * @brief check CPU usage
+   */
+  virtual void checkUsage();
+
   /**
    * @brief check CPU load average
+   */
+  virtual void checkLoad();
+
+  /**
+   * @brief check CPU thermal throttling
+   */
+  virtual void checkThermalThrottling();
+
+  /**
+   * @brief check CPU frequency
+   */
+  virtual void checkFrequency();
+#else  // 0
+  /**
+   * @brief update CPU usage
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  virtual void checkUsage(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+
+  /**
+   * @brief update CPU load average
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
@@ -118,7 +114,7 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**
-   * @brief check CPU thermal throttling
+   * @brief update CPU thermal throttling
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
@@ -127,23 +123,77 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**
-   * @brief check CPU frequency
+   * @brief update CPU frequency
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
    */
   virtual void checkFrequency(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+#endif  // 0
+  
+  /**
+   * @brief update CPU temperature
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  void updateTemperature(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+
+#if 0
+  /**
+   * @brief update CPU usage
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  void updateUsage(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+
+  /**
+   * @brief update CPU load average
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  void updateLoad(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+
+  /**
+   * @brief update CPU thermal throttling
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  void updateThermalThrottling(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+
+  /**
+   * @brief update CPU frequency
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  void updateFrequency(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+#endif  // 0
+  /**
+   * @brief timer callback to collect cpu statistics
+   */
+  void onTimer();
 
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
   char hostname_[HOST_NAME_MAX + 1];                //!< @brief host name
   int num_cores_;                                   //!< @brief number of cores
-  std::vector<cpu_temperature_info> temperatures_;  //!< @brief CPU list for temperature
-  std::vector<cpu_frequency_info> frequencies_;     //!< @brief CPU list for frequency
+  std::vector<CpuTemperatureInfo> temperatures_;    //!< @brief CPU list for temperature
+  std::vector<CpuFrequencyInfo> frequencies_;       //!< @brief CPU list for frequency
   std::vector<int> usage_warn_check_count_;         //!< @brief CPU list for usage over warn check counter
   std::vector<int> usage_error_check_count_;        //!< @brief CPU list for usage over error check counter
-  bool mpstat_exists_;                              //!< @brief flag if mpstat exists
+
+  std::mutex mutex_;
+  TemperatureData temperature_data_;
 
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error
@@ -173,6 +223,9 @@ protected:
   rclcpp::Publisher<tier4_external_api_msgs::msg::CpuUsage>::SharedPtr pub_cpu_usage_;
 
   virtual void publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usage);
+
+  rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect cpu statistics
+  rclcpp::CallbackGroup::SharedPtr timer_callback_group_;  //!< @brief Callback Group
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_

@@ -1,0 +1,70 @@
+// Copyright ,2025 Tier IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @file cpu_information.h
+ * @brief information about CPUs/cores
+ */
+
+#ifndef SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
+#define SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
+
+#include <diagnostic_updater/diagnostic_updater.hpp>
+
+#include <string>
+#include <map>
+
+/**
+ * @brief CPU temperature information
+ */
+struct CpuTemperatureInfo
+{
+  std::string label_;  //!< @brief cpu label
+  std::string path_;   //!< @brief sysfs path to cpu temperature
+
+  CpuTemperatureInfo() : label_(), path_() {}
+  CpuTemperatureInfo(const std::string & label, const std::string & path) : label_(label), path_(path) {}
+};
+
+/**
+ * @brief CPU frequency information
+ */
+struct CpuFrequencyInfo
+{
+  int index_;         //!< @brief cpu index
+  std::string path_;  //!< @brief sysfs path to cpu frequency
+
+  CpuFrequencyInfo() : index_(0), path_() {}
+  CpuFrequencyInfo(int index, const std::string & path) : index_(index), path_(path) {}
+};
+
+struct TemperatureData
+{
+  using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
+  float elapsed_ms;
+  uint8_t summary_status;
+  std::string summary_message;
+  struct CoreTemperature {
+    std::string label;
+    uint8_t status;
+    float temperature;
+    std::string error_key;
+    std::string error_value;
+  };
+  std::vector<CoreTemperature> core_data;
+};
+
+#endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
+
