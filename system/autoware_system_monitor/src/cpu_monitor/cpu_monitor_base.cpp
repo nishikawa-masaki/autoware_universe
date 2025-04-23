@@ -68,9 +68,9 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   updater_.add("CPU Temperature", this, &CPUMonitorBase::updateTemperature);
   updater_.add("CPU Usage", this, &CPUMonitorBase::updateUsage);
   updater_.add("CPU Load Average", this, &CPUMonitorBase::updateLoad);
+  updater_.add("CPU Frequency", this, &CPUMonitorBase::updateFrequency);
 #if 1
   updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::checkThermalThrottling);
-  updater_.add("CPU Frequency", this, &CPUMonitorBase::checkFrequency);
 #else  // 0
   updater_.add("CPU Usage", this, &CPUMonitorBase::checkUsage);
   updater_.add("CPU Load Average", this, &CPUMonitorBase::checkLoad);
@@ -466,33 +466,59 @@ void CPUMonitorBase::checkThermalThrottling(
   RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::checkThermalThrottling not implemented.");
 }
 
-void CPUMonitorBase::checkFrequency(diagnostic_updater::DiagnosticStatusWrapper & stat)
+void CPUMonitorBase::checkFrequency()
 {
+  std::lock_guard<std::mutex> lock(mutex_);
+  frequency_data_.clear();
+
   // Remember start time to measure elapsed time
-  const auto t_start = SystemMonitorUtility::startMeasurement();
+  const auto t_start = std::chrono::high_resolution_clock::now();
 
   if (frequencies_.empty()) {
-    stat.summary(DiagStatus::ERROR, "frequency files not found");
+    frequency_data_.summary_status = DiagStatus::ERROR;
+    frequency_data_.summary_message = "frequency files not found";
+    frequency_data_.elapsed_ms = 0.0f;
     return;
   }
 
-  for (auto itr = frequencies_.begin(); itr != frequencies_.end(); ++itr) {
+  for (const auto & entry : frequencies_) {
     // Read scaling_cur_freq file
-    const fs::path path(itr->path_);
+    const fs::path path(entry.path_);
     fs::ifstream ifs(path, std::ios::in);
     if (ifs) {
       std::string line;
       if (std::getline(ifs, line)) {
-        stat.addf(fmt::format("CPU {}: clock", itr->index_), "%d MHz", std::stoi(line) / 1000);
+        frequency_data_.core_data.emplace_back(
+          FrequencyData::CoreFrequency{entry.index_, DiagStatus::OK, std::stoi(line)});
       }
     }
     ifs.close();
   }
 
-  stat.summary(DiagStatus::OK, "OK");
+  frequency_data_.summary_status = DiagStatus::OK;
+  frequency_data_.summary_message = "OK";
 
   // Measure elapsed time since start time and report
-  SystemMonitorUtility::stopMeasurement(t_start, stat);
+  const auto t_end = std::chrono::high_resolution_clock::now();
+  const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
+  frequency_data_.elapsed_ms = elapsed_ms;
+}
+
+void CPUMonitorBase::updateFrequency(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  if (frequency_data_.summary_status != DiagStatus::OK) {
+    stat.summary(frequency_data_.summary_status, frequency_data_.summary_message);
+    return;
+  }
+
+  for (const auto & entry : frequency_data_.core_data) {
+    stat.addf(fmt::format("CPU {}: clock", entry.index), "%d MHz", (entry.frequency_khz / 1000));
+  }
+
+  stat.summary(frequency_data_.summary_status, frequency_data_.summary_message);
+  stat.addf("execution time", "%f ms", frequency_data_.elapsed_ms);
 }
 
 void CPUMonitorBase::getTemperatureFileNames()
@@ -544,4 +570,5 @@ void CPUMonitorBase::onTimer() {
   checkTemperature();
   checkUsage();
   checkLoad();
+  checkFrequency();
 }

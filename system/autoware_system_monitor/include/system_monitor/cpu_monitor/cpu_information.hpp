@@ -105,4 +105,24 @@ struct LoadData
   }
 };
 
+struct FrequencyData
+{
+  float elapsed_ms;
+  int summary_status;
+  std::string summary_message;
+  struct CoreFrequency {
+    int index;
+    int status;
+    int frequency_khz;
+  };
+  std::vector<CoreFrequency> core_data;
+
+  void clear()
+  {
+    elapsed_ms = 0.0f;
+    summary_status = 0;
+    summary_message.clear();
+    core_data.clear();
+  }
+};
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_

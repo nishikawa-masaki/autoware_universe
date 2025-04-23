@@ -84,16 +84,16 @@ protected:
    */
   virtual void checkLoad();
 
+  /**
+   * @brief check CPU frequency
+   */
+  virtual void checkFrequency();
 #if 0
   /**
    * @brief check CPU thermal throttling
    */
   virtual void checkThermalThrottling();
 
-  /**
-   * @brief check CPU frequency
-   */
-  virtual void checkFrequency();
   /**
    * @brief update CPU usage
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -112,14 +112,6 @@ protected:
   virtual void checkThermalThrottling(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
-  /**
-   * @brief update CPU frequency
-   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
-   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
-   * to pass diagnostic message updated in this function to diagnostic publish calls.
-   */
-  virtual void checkFrequency(
-    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 #endif  // 0
   
   /**
@@ -149,6 +141,14 @@ protected:
   void updateLoad(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
+  /**
+   * @brief update CPU frequency
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  void updateFrequency(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 #if 0
   /**
    * @brief update CPU thermal throttling
@@ -159,14 +159,6 @@ protected:
   void updateThermalThrottling(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
-  /**
-   * @brief update CPU frequency
-   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
-   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
-   * to pass diagnostic message updated in this function to diagnostic publish calls.
-   */
-  void updateFrequency(
-    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 #endif  // 0
   /**
    * @brief timer callback to collect cpu statistics
@@ -186,6 +178,7 @@ protected:
   TemperatureData temperature_data_;
   UsageData usage_data_;
   LoadData load_data_;
+  FrequencyData frequency_data_;
 
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error
