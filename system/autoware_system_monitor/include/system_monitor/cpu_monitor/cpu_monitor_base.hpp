@@ -79,12 +79,12 @@ protected:
    */
   virtual void checkUsage();
 
-#if 0
   /**
    * @brief check CPU load average
    */
   virtual void checkLoad();
 
+#if 0
   /**
    * @brief check CPU thermal throttling
    */
@@ -103,16 +103,6 @@ protected:
   virtual void checkUsage(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 #else  // 0
-
-  /**
-   * @brief update CPU load average
-   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
-   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
-   * to pass diagnostic message updated in this function to diagnostic publish calls.
-   */
-  virtual void checkLoad(
-    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
-
   /**
    * @brief update CPU thermal throttling
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -150,7 +140,6 @@ protected:
   void updateUsage(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
-#if 0
   /**
    * @brief update CPU load average
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -160,6 +149,7 @@ protected:
   void updateLoad(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
+#if 0
   /**
    * @brief update CPU thermal throttling
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -195,6 +185,7 @@ protected:
   std::mutex mutex_;
   TemperatureData temperature_data_;
   UsageData usage_data_;
+  LoadData load_data_;
 
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error

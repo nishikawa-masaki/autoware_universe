@@ -67,12 +67,13 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   updater_.setHardwareID(hostname_);
   updater_.add("CPU Temperature", this, &CPUMonitorBase::updateTemperature);
   updater_.add("CPU Usage", this, &CPUMonitorBase::updateUsage);
+  updater_.add("CPU Load Average", this, &CPUMonitorBase::updateLoad);
 #if 1
-  updater_.add("CPU Load Average", this, &CPUMonitorBase::checkLoad);
   updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::checkThermalThrottling);
   updater_.add("CPU Frequency", this, &CPUMonitorBase::checkFrequency);
 #else  // 0
   updater_.add("CPU Usage", this, &CPUMonitorBase::checkUsage);
+  updater_.add("CPU Load Average", this, &CPUMonitorBase::checkLoad);
   updater_.add("CPU Load Average", this, &CPUMonitorBase::updateLoad);
   updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::updateThermalThrottling);
   updater_.add("CPU Frequency", this, &CPUMonitorBase::updateFrequency);
@@ -388,32 +389,41 @@ int CPUMonitorBase::CpuUsageToLevel(const std::string & cpu_name, float usage)
   return level;
 }
 
-void CPUMonitorBase::checkLoad(diagnostic_updater::DiagnosticStatusWrapper & stat)
+void CPUMonitorBase::checkLoad()
 {
+  std::lock_guard<std::mutex> lock(mutex_);
+  load_data_.clear();
+
   // Remember start time to measure elapsed time
-  const auto t_start = SystemMonitorUtility::startMeasurement();
+  const auto t_start = std::chrono::high_resolution_clock::now();
 
   double load_average[3];
 
   std::ifstream ifs("/proc/loadavg", std::ios::in);
 
   if (!ifs) {
-    stat.summary(DiagStatus::ERROR, "uptime error");
-    stat.add("uptime", strerror(errno));
+    load_data_.summary_status = DiagStatus::ERROR;
+    load_data_.summary_message = "uptime error";
+    load_data_.elapsed_ms = 0.0f;
+    // TODO(masakinishikawa): add error message
     return;
   }
 
   std::string line;
 
   if (!std::getline(ifs, line)) {
-    stat.summary(DiagStatus::ERROR, "uptime error");
-    stat.add("uptime", "format error");
+    load_data_.summary_status = DiagStatus::ERROR;
+    load_data_.summary_message = "uptime error";
+    load_data_.elapsed_ms = 0.0f;
+    // TODO(masakinishikawa): add error message
     return;
   }
 
   if (sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) != 3) {
-    stat.summary(DiagStatus::ERROR, "uptime error");
-    stat.add("uptime", "format error");
+    load_data_.summary_status = DiagStatus::ERROR;
+    load_data_.summary_message = "uptime error";
+    load_data_.elapsed_ms = 0.0f;
+    // TODO(masakinishikawa): add error message
     return;
   }
 
@@ -421,13 +431,33 @@ void CPUMonitorBase::checkLoad(diagnostic_updater::DiagnosticStatusWrapper & sta
   load_average[1] /= num_cores_;
   load_average[2] /= num_cores_;
 
-  stat.summary(DiagStatus::OK, "OK");
-  stat.addf("1min", "%.2f%%", load_average[0] * 1e2);
-  stat.addf("5min", "%.2f%%", load_average[1] * 1e2);
-  stat.addf("15min", "%.2f%%", load_average[2] * 1e2);
+  load_data_.summary_status = DiagStatus::OK;
+  load_data_.summary_message = "OK";
+  load_data_.load_average[0] = load_average[0] * 1e2;
+  load_data_.load_average[1] = load_average[1] * 1e2;
+  load_data_.load_average[2] = load_average[2] * 1e2;
 
   // Measure elapsed time since start time and report
-  SystemMonitorUtility::stopMeasurement(t_start, stat);
+  const auto t_end = std::chrono::high_resolution_clock::now();
+  const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
+  load_data_.elapsed_ms = elapsed_ms;
+}
+
+void CPUMonitorBase::updateLoad(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  if (load_data_.summary_status != DiagStatus::OK) {
+    stat.summary(load_data_.summary_status, load_data_.summary_message);
+    return;
+  }
+
+  stat.summary(load_data_.summary_status, load_data_.summary_message);
+  stat.addf("1min", "%.2f%%", load_data_.load_average[0]);
+  stat.addf("5min", "%.2f%%", load_data_.load_average[1]);
+  stat.addf("15min", "%.2f%%", load_data_.load_average[2]);
+
+  stat.addf("execution time", "%f ms", load_data_.elapsed_ms);
 }
 
 void CPUMonitorBase::checkThermalThrottling(
@@ -513,4 +543,5 @@ void CPUMonitorBase::publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usag
 void CPUMonitorBase::onTimer() {
   checkTemperature();
   checkUsage();
+  checkLoad();
 }

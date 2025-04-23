@@ -54,11 +54,11 @@ struct TemperatureData
   using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
   float elapsed_ms;
-  uint8_t summary_status;
+  int summary_status;
   std::string summary_message;
   struct CoreTemperature {
     std::string label;
-    uint8_t status;
+    int status;
     float temperature;
     std::string error_key;
     std::string error_value;
@@ -69,9 +69,9 @@ struct TemperatureData
 struct UsageData
 {
   float elapsed_ms;
-  uint8_t summary_status;
+  int summary_status;
   std::string summary_message;
-  
+
   struct CpuUsage {
     std::string label;
     int status;
@@ -87,5 +87,22 @@ struct UsageData
   std::vector<CpuUsage> core_data;
 };
 
-#endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
+struct LoadData
+{
+  float elapsed_ms;
+  int summary_status;
+  std::string summary_message;
+  double load_average[3];
 
+  void clear()
+  {
+    elapsed_ms = 0.0f;
+    summary_status = 0;
+    summary_message.clear();
+    load_average[0] = 0.0;
+    load_average[1] = 0.0;
+    load_average[2] = 0.0;
+  }
+};
+
+#endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
