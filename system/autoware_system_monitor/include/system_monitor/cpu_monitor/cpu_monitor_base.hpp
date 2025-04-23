@@ -74,12 +74,12 @@ protected:
    */
   virtual int CpuUsageToLevel(const std::string & cpu_name, float usage);
 
-#if 0
   /**
    * @brief check CPU usage
    */
   virtual void checkUsage();
 
+#if 0
   /**
    * @brief check CPU load average
    */
@@ -94,7 +94,6 @@ protected:
    * @brief check CPU frequency
    */
   virtual void checkFrequency();
-#else  // 0
   /**
    * @brief update CPU usage
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -103,6 +102,7 @@ protected:
    */
   virtual void checkUsage(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+#else  // 0
 
   /**
    * @brief update CPU load average
@@ -141,7 +141,6 @@ protected:
   void updateTemperature(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
-#if 0
   /**
    * @brief update CPU usage
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -151,6 +150,7 @@ protected:
   void updateUsage(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
+#if 0
   /**
    * @brief update CPU load average
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -194,6 +194,7 @@ protected:
 
   std::mutex mutex_;
   TemperatureData temperature_data_;
+  UsageData usage_data_;
 
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error

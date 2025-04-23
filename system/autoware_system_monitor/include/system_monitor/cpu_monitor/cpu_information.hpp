@@ -66,5 +66,26 @@ struct TemperatureData
   std::vector<CoreTemperature> core_data;
 };
 
+struct UsageData
+{
+  float elapsed_ms;
+  uint8_t summary_status;
+  std::string summary_message;
+  
+  struct CpuUsage {
+    std::string label;
+    int status;
+    float usr;
+    float nice;
+    float sys;
+    float iowait;
+    float idle;
+    float total;
+    std::string error_key;
+    std::string error_value;
+  };
+  std::vector<CpuUsage> core_data;
+};
+
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
 
