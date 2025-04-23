@@ -18,8 +18,8 @@
  */
 
 #include "system_monitor/cpu_monitor/cpu_monitor_base.hpp"
-#include "system_monitor/cpu_monitor/cpu_information.hpp"
 
+#include "system_monitor/cpu_monitor/cpu_information.hpp"
 #include "system_monitor/system_monitor_utility.hpp"
 
 #include <boost/filesystem.hpp>
@@ -49,19 +49,25 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   temperatures_(),
   frequencies_(),
   mpstat_exists_(false),
-  usage_warn_(declare_parameter<float>("usage_warn", 0.96,
+  usage_warn_(declare_parameter<float>(
+    "usage_warn", 0.96,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
       "Threshold for CPU usage warning. Cannot be changed after initialization."))),
-  usage_error_(declare_parameter<float>("usage_error", 0.96,
+  usage_error_(declare_parameter<float>(
+    "usage_error", 0.96,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
       "Threshold for CPU usage error. Cannot be changed after initialization."))),
-  usage_warn_count_(declare_parameter<int>("usage_warn_count", 1,
+  usage_warn_count_(declare_parameter<int>(
+    "usage_warn_count", 1,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Consecutive count threshold for CPU usage warning. Cannot be changed after initialization."))),
-  usage_error_count_(declare_parameter<int>("usage_error_count", 2,
+      "Consecutive count threshold for CPU usage warning. Cannot be changed after "
+      "initialization."))),
+  usage_error_count_(declare_parameter<int>(
+    "usage_error_count", 2,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
       "Consecutive count threshold for CPU usage error. Cannot be changed after initialization."))),
-  usage_average_(declare_parameter<bool>("usage_avg", true,
+  usage_average_(declare_parameter<bool>(
+    "usage_avg", true,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
       "Use average CPU usage across all processors. Cannot be changed after initialization.")))
 {
@@ -95,11 +101,11 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   timer_callback_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   timer_ = rclcpp::create_timer(
     this, get_clock(), 1s, std::bind(&CPUMonitorBase::onTimer, this), timer_callback_group_);
-  
+
   temperature_data_.clear();
   usage_data_.clear();
   load_data_.clear();
-  frequency_data_.clear();  
+  frequency_data_.clear();
 }
 
 void CPUMonitorBase::update()
@@ -130,8 +136,8 @@ void CPUMonitorBase::checkTemperature()
     fs::ifstream ifs(path, std::ios::in);
     if (!ifs) {
       error_str = "file open error";
-      temperature_data_.core_data.emplace_back(
-        TemperatureData::CoreTemperature{entry.label_, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
+      temperature_data_.core_data.emplace_back(TemperatureData::CoreTemperature{
+        entry.label_, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
       continue;
     }
 
@@ -195,7 +201,8 @@ void CPUMonitorBase::checkUsage()
     usage_data_.summary_message = "mpstat error";
     usage_data_.elapsed_ms = 0.0f;
     usage_data_.error_key = "mpstat";
-    usage_data_.error_value = "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat";
+    usage_data_.error_value =
+      "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat";
     return;
   }
 
@@ -449,7 +456,9 @@ void CPUMonitorBase::checkLoad()
     return;
   }
 
-  if (sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) != 3) {
+  if (
+    sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) !=
+    3) {
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
     load_data_.elapsed_ms = 0.0f;
@@ -584,9 +593,11 @@ void CPUMonitorBase::getFrequencyFileNames()
     frequencies_.push_back(frequency);
   }
 
-  std::sort(frequencies_.begin(), frequencies_.end(), [](const CpuFrequencyInfo & c1, const CpuFrequencyInfo & c2) {
-    return c1.index_ < c2.index_;
-  });  // NOLINT
+  std::sort(
+    frequencies_.begin(), frequencies_.end(),
+    [](const CpuFrequencyInfo & c1, const CpuFrequencyInfo & c2) {
+      return c1.index_ < c2.index_;
+    });  // NOLINT
 }
 
 void CPUMonitorBase::publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usage)
@@ -598,7 +609,8 @@ void CPUMonitorBase::publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usag
   pub_cpu_usage_->publish(usage);
 }
 
-void CPUMonitorBase::onTimer() {
+void CPUMonitorBase::onTimer()
+{
   checkTemperature();
   checkUsage();
   checkLoad();
