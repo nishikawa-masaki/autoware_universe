@@ -50,15 +50,20 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   frequencies_(),
   mpstat_exists_(false),
   usage_warn_(declare_parameter<float>("usage_warn", 0.96,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description("Threshold for CPU usage warning. Cannot be changed after initialization."))),
+    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+      "Threshold for CPU usage warning. Cannot be changed after initialization."))),
   usage_error_(declare_parameter<float>("usage_error", 0.96,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description("Threshold for CPU usage error. Cannot be changed after initialization."))),
+    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+      "Threshold for CPU usage error. Cannot be changed after initialization."))),
   usage_warn_count_(declare_parameter<int>("usage_warn_count", 1,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description("Consecutive count threshold for CPU usage warning. Cannot be changed after initialization."))),
+    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+      "Consecutive count threshold for CPU usage warning. Cannot be changed after initialization."))),
   usage_error_count_(declare_parameter<int>("usage_error_count", 2,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description("Consecutive count threshold for CPU usage error. Cannot be changed after initialization."))),
+    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+      "Consecutive count threshold for CPU usage error. Cannot be changed after initialization."))),
   usage_average_(declare_parameter<bool>("usage_avg", true,
-    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description("Use average CPU usage across all processors. Cannot be changed after initialization.")))
+    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+      "Use average CPU usage across all processors. Cannot be changed after initialization.")))
 {
   gethostname(hostname_, sizeof(hostname_));
   num_cores_ = boost::thread::hardware_concurrency();
@@ -75,7 +80,7 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   updater_.add("CPU Usage", this, &CPUMonitorBase::updateUsage);
   updater_.add("CPU Load Average", this, &CPUMonitorBase::updateLoad);
   updater_.add("CPU Frequency", this, &CPUMonitorBase::updateFrequency);
-  // Data format of ThermalThrottling differs between platforms.
+  // Data format of ThermalThrottling differs among platforms.
   // So checking of status and updating of diagnostic are executed simultaneously.
   updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::checkThermalThrottling);
 
@@ -90,6 +95,11 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   timer_callback_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   timer_ = rclcpp::create_timer(
     this, get_clock(), 1s, std::bind(&CPUMonitorBase::onTimer, this), timer_callback_group_);
+  
+  temperature_data_.clear();
+  usage_data_.clear();
+  load_data_.clear();
+  frequency_data_.clear();  
 }
 
 void CPUMonitorBase::update()
@@ -114,14 +124,14 @@ void CPUMonitorBase::checkTemperature()
   int level = DiagStatus::OK;
   std::string error_str = "";
 
-  for (auto itr = temperatures_.begin(); itr != temperatures_.end(); ++itr) {
+  for (const auto & entry : temperatures_) {
     // Read temperature file
-    const fs::path path(itr->path_);
+    const fs::path path(entry.path_);
     fs::ifstream ifs(path, std::ios::in);
     if (!ifs) {
       error_str = "file open error";
       temperature_data_.core_data.emplace_back(
-        TemperatureData::CoreTemperature{itr->label_, DiagStatus::ERROR, 0.0f, error_str, itr->path_});
+        TemperatureData::CoreTemperature{entry.label_, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
       continue;
     }
 
@@ -130,7 +140,7 @@ void CPUMonitorBase::checkTemperature()
     ifs.close();
     temperature /= 1000;
     temperature_data_.core_data.emplace_back(
-      TemperatureData::CoreTemperature{itr->label_, DiagStatus::OK, temperature, "", ""});
+      TemperatureData::CoreTemperature{entry.label_, DiagStatus::OK, temperature, "", ""});
   }
 
   if (!error_str.empty()) {
@@ -154,13 +164,13 @@ void CPUMonitorBase::updateTemperature(diagnostic_updater::DiagnosticStatusWrapp
   int level = DiagStatus::OK;
   std::string error_str = "";
 
-  for (auto itr = temperature_data_.core_data.begin(); itr != temperature_data_.core_data.end(); ++itr) {
-    if (itr->status == DiagStatus::OK) {
-      stat.addf(itr->label, "%.1f DegC", itr->temperature);
+  for (const auto & entry : temperature_data_.core_data) {
+    if (entry.status == DiagStatus::OK) {
+      stat.addf(entry.label, "%.1f DegC", entry.temperature);
     } else {
-      level = itr->status;
-      error_str = itr->error_key;
-      stat.add(itr->error_key, itr->error_value);
+      level = entry.status;
+      error_str = entry.error_key;
+      stat.add(entry.error_key, entry.error_value);
     }
   }
 
@@ -328,6 +338,7 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
     stat.summary(usage_data_.summary_status, usage_data_.summary_message);
     stat.add(usage_data_.error_key, usage_data_.error_value);
     cpu_usage.all.status = CpuStatus::STALE;
+    cpu_usage.cpus.clear();
     publishCpuUsage(cpu_usage);
     return;
   }

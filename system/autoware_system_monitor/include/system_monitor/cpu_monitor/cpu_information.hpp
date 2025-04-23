@@ -93,6 +93,16 @@ struct UsageData
     float total;
   };
   std::vector<CpuUsage> core_data;
+
+  void clear()
+  {
+    elapsed_ms = 0.0f;
+    summary_status = 0;
+    summary_message.clear();
+    error_key.clear();
+    error_value.clear();
+    core_data.clear();
+  }
 };
 
 struct LoadData

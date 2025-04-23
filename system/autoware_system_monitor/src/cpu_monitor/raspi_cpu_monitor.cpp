@@ -75,8 +75,8 @@ void CPUMonitor::getTemperatureFileNames()
   std::vector<thermal_zone> thermal_zones;
   SystemMonitorUtility::getThermalZone("cpu-thermal", &thermal_zones);
 
-  for (auto itr = thermal_zones.begin(); itr != thermal_zones.end(); ++itr) {
-    temperatures_.emplace_back(itr->label_, itr->path_);
+  for (const auto & zone : thermal_zones) {
+    temperatures_.emplace_back(zone.label_, zone.path_);
   }
 }
 

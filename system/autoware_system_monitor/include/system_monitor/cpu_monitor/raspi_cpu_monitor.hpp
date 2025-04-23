@@ -63,8 +63,12 @@ protected:
 
   /**
    * @brief check CPU thermal throttling
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
    */
-  void checkThermalThrottling() override;
+  void checkThermalThrottling(
+    diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__RASPI_CPU_MONITOR_HPP_

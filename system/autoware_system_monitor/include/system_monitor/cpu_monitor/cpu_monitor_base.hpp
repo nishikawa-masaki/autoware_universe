@@ -29,9 +29,9 @@
 
 #include <climits>
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
-#include <mutex>
 
 class CPUMonitorBase : public rclcpp::Node
 {
@@ -90,15 +90,6 @@ protected:
   virtual void checkFrequency();
 
   /**
-   * @brief update CPU thermal throttling
-   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
-   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
-   * to pass diagnostic message updated in this function to diagnostic publish calls.
-   */
-  virtual void checkThermalThrottling(
-    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
-  
-  /**
    * @brief update CPU temperature
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
@@ -135,9 +126,26 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**
+   * @brief check CPU thermal throttling
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   * @note Data format of ThermalThrottling differs among platforms.
+   * So checking of status and updating of diagnostic are executed simultaneously.
+   */
+  virtual void checkThermalThrottling(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+
+  /**
    * @brief timer callback to collect cpu statistics
    */
   void onTimer();
+
+  /**
+   * @brief publish CPU usage as an independent topic
+   * @param [in] usage CPU usage
+   */
+  virtual void publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usage);
 
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
@@ -149,18 +157,12 @@ protected:
   std::vector<int> usage_error_check_count_;        //!< @brief CPU list for usage over error check counter
   bool mpstat_exists_;                              //!< @brief Check if mpstat command exists
 
-  std::mutex mutex_;
-  TemperatureData temperature_data_;
-  UsageData usage_data_;
-  LoadData load_data_;
-  FrequencyData frequency_data_;
-
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error
   int usage_warn_count_;   //!< @brief continuous count over usage_warn_ to generate warning
   int usage_error_count_;  //!< @brief continuous count over usage_error_ to generate error
   bool usage_average_;     //!< @brief Check CPU usage calculated as averages among all processors
-
+  
   /**
    * @brief CPU temperature status messages
    */
@@ -182,10 +184,14 @@ protected:
   // Publisher
   rclcpp::Publisher<tier4_external_api_msgs::msg::CpuUsage>::SharedPtr pub_cpu_usage_;
 
-  virtual void publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usage);
-
   rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect cpu statistics
   rclcpp::CallbackGroup::SharedPtr timer_callback_group_;  //!< @brief Callback Group
+
+  std::mutex mutex_;                  //!< @brief mutex for protecting snapshot
+  TemperatureData temperature_data_;  //!< @brief snapshot of CPU temperature 
+  UsageData usage_data_;              //!< @brief snapshot of CPU usage
+  LoadData load_data_;                //!< @brief snapshot of CPU load average
+  FrequencyData frequency_data_;      //!< @brief snapshot of CPU frequency
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_
