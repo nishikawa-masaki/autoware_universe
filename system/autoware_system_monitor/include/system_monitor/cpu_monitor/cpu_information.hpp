@@ -64,6 +64,14 @@ struct TemperatureData
     std::string error_value;
   };
   std::vector<CoreTemperature> core_data;
+
+  void clear()
+  {
+    elapsed_ms = 0.0f;
+    summary_status = 0;
+    summary_message.clear();
+    core_data.clear();
+  }
 };
 
 struct UsageData
@@ -71,6 +79,8 @@ struct UsageData
   float elapsed_ms;
   int summary_status;
   std::string summary_message;
+  std::string error_key;
+  std::string error_value;
 
   struct CpuUsage {
     std::string label;
@@ -81,8 +91,6 @@ struct UsageData
     float iowait;
     float idle;
     float total;
-    std::string error_key;
-    std::string error_value;
   };
   std::vector<CpuUsage> core_data;
 };
@@ -92,6 +100,8 @@ struct LoadData
   float elapsed_ms;
   int summary_status;
   std::string summary_message;
+  std::string error_key;
+  std::string error_value;
   double load_average[3];
 
   void clear()

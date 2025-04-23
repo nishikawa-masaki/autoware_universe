@@ -48,6 +48,7 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   num_cores_(0),
   temperatures_(),
   frequencies_(),
+  mpstat_exists_(false),
   usage_warn_(declare_parameter<float>("usage_warn", 0.96,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description("Threshold for CPU usage warning. Cannot be changed after initialization."))),
   usage_error_(declare_parameter<float>("usage_error", 0.96,
@@ -64,20 +65,20 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   usage_warn_check_count_.resize(num_cores_ + 2);   // 2 = all + dummy
   usage_error_check_count_.resize(num_cores_ + 2);  // 2 = all + dummy
 
+  // Check if command exists
+  fs::path p = bp::search_path("mpstat");
+  mpstat_exists_ = (p.empty()) ? false : true;
+
   updater_.setHardwareID(hostname_);
+  // Update diagnostic data collected by the timer callback.
   updater_.add("CPU Temperature", this, &CPUMonitorBase::updateTemperature);
   updater_.add("CPU Usage", this, &CPUMonitorBase::updateUsage);
   updater_.add("CPU Load Average", this, &CPUMonitorBase::updateLoad);
   updater_.add("CPU Frequency", this, &CPUMonitorBase::updateFrequency);
-#if 1
+  // Data format of ThermalThrottling differs between platforms.
+  // So checking of status and updating of diagnostic are executed simultaneously.
   updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::checkThermalThrottling);
-#else  // 0
-  updater_.add("CPU Usage", this, &CPUMonitorBase::checkUsage);
-  updater_.add("CPU Load Average", this, &CPUMonitorBase::checkLoad);
-  updater_.add("CPU Load Average", this, &CPUMonitorBase::updateLoad);
-  updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::updateThermalThrottling);
-  updater_.add("CPU Frequency", this, &CPUMonitorBase::updateFrequency);
-#endif  // 0
+
   // Publisher
   rclcpp::QoS durable_qos{1};
   durable_qos.transient_local();
@@ -85,7 +86,7 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
     this->create_publisher<tier4_external_api_msgs::msg::CpuUsage>("~/cpu_usage", durable_qos);
 
   using namespace std::chrono_literals;
-  // Start timer to execute collect cpu statistics
+  // Start timer for collecting cpu statistics
   timer_callback_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   timer_ = rclcpp::create_timer(
     this, get_clock(), 1s, std::bind(&CPUMonitorBase::onTimer, this), timer_callback_group_);
@@ -102,13 +103,11 @@ void CPUMonitorBase::checkTemperature()
   const auto t_start = std::chrono::high_resolution_clock::now();
 
   std::lock_guard<std::mutex> lock(mutex_);
-  temperature_data_.core_data.clear();  // Data content is cleared, but memory is not freed
+  temperature_data_.clear();
 
   if (temperatures_.empty()) {
     temperature_data_.summary_status = DiagStatus::ERROR;
     temperature_data_.summary_message = "temperature files not found";
-    temperature_data_.core_data.clear();  // Data content is cleared, but memory is not freed
-    temperature_data_.elapsed_ms = 0.0f;
     return;
   }
 
@@ -181,6 +180,15 @@ void CPUMonitorBase::checkUsage()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
+  if (!mpstat_exists_) {
+    usage_data_.summary_status = DiagStatus::ERROR;
+    usage_data_.summary_message = "mpstat error";
+    usage_data_.elapsed_ms = 0.0f;
+    usage_data_.error_key = "mpstat";
+    usage_data_.error_value = "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat";
+    return;
+  }
+
   // Get CPU Usage
 
   // boost::process create file descriptor without O_CLOEXEC required for multithreading.
@@ -190,6 +198,8 @@ void CPUMonitorBase::checkUsage()
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "pipe2 error";
     usage_data_.elapsed_ms = 0.0f;
+    usage_data_.error_key = "pipe2";
+    usage_data_.error_value = strerror(errno);
     return;
   }
   bp::pipe out_pipe{out_fd[0], out_fd[1]};
@@ -200,28 +210,32 @@ void CPUMonitorBase::checkUsage()
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "pipe2 error";
     usage_data_.elapsed_ms = 0.0f;
+    usage_data_.error_key = "pipe2";
+    usage_data_.error_value = strerror(errno);
     return;
   }
   bp::pipe err_pipe{err_fd[0], err_fd[1]};
   bp::ipstream is_err{std::move(err_pipe)};
-
-  bp::child c("mpstat -P ALL 1 1 -o JSON", bp::std_out > is_out, bp::std_err > is_err);
-  c.wait();
-
-  if (c.exit_code() != 0) {
-    std::ostringstream os;
-    is_err >> os.rdbuf();
-    usage_data_.summary_status = DiagStatus::ERROR;
-    usage_data_.summary_message = "mpstat error";
-    usage_data_.elapsed_ms = 0.0f;
-    return;
-  }
 
   int level = DiagStatus::OK;
   int whole_level = DiagStatus::OK;
 
   pt::ptree pt;
   try {
+    // Execution of mpstat command takes 1 second.
+    // On failure, it will throw an exception or return non-zero exit code.
+    bp::child c("mpstat -P ALL 1 1 -o JSON", bp::std_out > is_out, bp::std_err > is_err);
+    c.wait();
+    if (c.exit_code() != 0) {
+      std::ostringstream os;
+      is_err >> os.rdbuf();
+      usage_data_.summary_status = DiagStatus::ERROR;
+      usage_data_.summary_message = "mpstat error";
+      usage_data_.elapsed_ms = 0.0f;
+      usage_data_.error_key = "mpstat";
+      usage_data_.error_value = os.str();
+      return;
+    }
     // Analyze JSON output
     read_json(is_out, pt);
 
@@ -278,7 +292,7 @@ void CPUMonitorBase::checkUsage()
           }
 
           usage_data_.core_data.emplace_back(
-            UsageData::CpuUsage{cpu_name, level, usr, nice, sys, iowait, idle, total, "", ""});
+            UsageData::CpuUsage{cpu_name, level, usr, nice, sys, iowait, idle, total});
         }
       }
     }
@@ -286,6 +300,8 @@ void CPUMonitorBase::checkUsage()
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "mpstat exception";
     usage_data_.elapsed_ms = 0.0f;
+    usage_data_.error_key = "mpstat";
+    usage_data_.error_value = e.what();
     std::fill(usage_warn_check_count_.begin(), usage_warn_check_count_.end(), 0);
     std::fill(usage_error_check_count_.begin(), usage_error_check_count_.end(), 0);
     usage_data_.core_data.clear();
@@ -310,6 +326,7 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
 
   if (usage_data_.summary_status != DiagStatus::OK) {
     stat.summary(usage_data_.summary_status, usage_data_.summary_message);
+    stat.add(usage_data_.error_key, usage_data_.error_value);
     cpu_usage.all.status = CpuStatus::STALE;
     publishCpuUsage(cpu_usage);
     return;
@@ -405,7 +422,8 @@ void CPUMonitorBase::checkLoad()
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
     load_data_.elapsed_ms = 0.0f;
-    // TODO(masakinishikawa): add error message
+    load_data_.error_key = "uptime";
+    load_data_.error_value = strerror(errno);
     return;
   }
 
@@ -415,7 +433,8 @@ void CPUMonitorBase::checkLoad()
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
     load_data_.elapsed_ms = 0.0f;
-    // TODO(masakinishikawa): add error message
+    load_data_.error_key = "uptime";
+    load_data_.error_value = "format error";
     return;
   }
 
@@ -423,7 +442,8 @@ void CPUMonitorBase::checkLoad()
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
     load_data_.elapsed_ms = 0.0f;
-    // TODO(masakinishikawa): add error message
+    load_data_.error_key = "uptime";
+    load_data_.error_value = "format error";
     return;
   }
 
@@ -449,6 +469,7 @@ void CPUMonitorBase::updateLoad(diagnostic_updater::DiagnosticStatusWrapper & st
 
   if (load_data_.summary_status != DiagStatus::OK) {
     stat.summary(load_data_.summary_status, load_data_.summary_message);
+    stat.add(load_data_.error_key, load_data_.error_value);
     return;
   }
 

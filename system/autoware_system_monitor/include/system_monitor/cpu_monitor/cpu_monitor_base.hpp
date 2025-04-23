@@ -88,21 +88,7 @@ protected:
    * @brief check CPU frequency
    */
   virtual void checkFrequency();
-#if 0
-  /**
-   * @brief check CPU thermal throttling
-   */
-  virtual void checkThermalThrottling();
 
-  /**
-   * @brief update CPU usage
-   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
-   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
-   * to pass diagnostic message updated in this function to diagnostic publish calls.
-   */
-  virtual void checkUsage(
-    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
-#else  // 0
   /**
    * @brief update CPU thermal throttling
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
@@ -111,8 +97,6 @@ protected:
    */
   virtual void checkThermalThrottling(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
-
-#endif  // 0
   
   /**
    * @brief update CPU temperature
@@ -149,17 +133,7 @@ protected:
    */
   void updateFrequency(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
-#if 0
-  /**
-   * @brief update CPU thermal throttling
-   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
-   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
-   * to pass diagnostic message updated in this function to diagnostic publish calls.
-   */
-  void updateThermalThrottling(
-    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
-#endif  // 0
   /**
    * @brief timer callback to collect cpu statistics
    */
@@ -173,6 +147,7 @@ protected:
   std::vector<CpuFrequencyInfo> frequencies_;       //!< @brief CPU list for frequency
   std::vector<int> usage_warn_check_count_;         //!< @brief CPU list for usage over warn check counter
   std::vector<int> usage_error_check_count_;        //!< @brief CPU list for usage over error check counter
+  bool mpstat_exists_;                              //!< @brief Check if mpstat command exists
 
   std::mutex mutex_;
   TemperatureData temperature_data_;
