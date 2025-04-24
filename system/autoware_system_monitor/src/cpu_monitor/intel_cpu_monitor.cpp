@@ -190,19 +190,21 @@ void CPUMonitor::getTemperatureFileNames()
     temperatures_.push_back(temperature);
   }
 
-  std::sort(temperatures_.begin(), temperatures_.end(), [](const CpuTemperatureInfo & c1, const CpuTemperatureInfo & c2) {
-    std::smatch match;
-    const std::regex filter(".*temp(\\d+)_input");
-    int n1 = 0;
-    int n2 = 0;
-    if (std::regex_match(c1.path_, match, filter)) {
-      n1 = std::stoi(match[1].str());
-    }
-    if (std::regex_match(c2.path_, match, filter)) {
-      n2 = std::stoi(match[1].str());
-    }
-    return n1 < n2;
-  });  // NOLINT
+  std::sort(
+    temperatures_.begin(), temperatures_.end(),
+    [](const CpuTemperatureInfo & c1, const CpuTemperatureInfo & c2) {
+      std::smatch match;
+      const std::regex filter(".*temp(\\d+)_input");
+      int n1 = 0;
+      int n2 = 0;
+      if (std::regex_match(c1.path_, match, filter)) {
+        n1 = std::stoi(match[1].str());
+      }
+      if (std::regex_match(c2.path_, match, filter)) {
+        n2 = std::stoi(match[1].str());
+      }
+      return n1 < n2;
+    });  // NOLINT
 }
 
 #include <rclcpp_components/register_node_macro.hpp>

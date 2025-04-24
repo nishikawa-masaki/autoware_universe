@@ -32,7 +32,10 @@ struct CpuTemperatureInfo
   std::string path_;   //!< @brief sysfs path to cpu temperature
 
   CpuTemperatureInfo() : label_(), path_() {}
-  CpuTemperatureInfo(const std::string & label, const std::string & path) : label_(label), path_(path) {}
+  CpuTemperatureInfo(const std::string & label, const std::string & path)
+  : label_(label), path_(path)
+  {
+  }
 };
 
 /**
@@ -52,7 +55,8 @@ struct TemperatureData
   float elapsed_ms;
   int summary_status;
   std::string summary_message;
-  struct CoreTemperature {
+  struct CoreTemperature
+  {
     std::string label;
     int status;
     float temperature;
@@ -78,7 +82,8 @@ struct UsageData
   std::string error_key;
   std::string error_value;
 
-  struct CpuUsage {
+  struct CpuUsage
+  {
     std::string label;
     int status;
     float usr;
@@ -126,7 +131,8 @@ struct FrequencyData
   float elapsed_ms;
   int summary_status;
   std::string summary_message;
-  struct CoreFrequency {
+  struct CoreFrequency
+  {
     int index;
     int status;
     int frequency_khz;
