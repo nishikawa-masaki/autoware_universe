@@ -1,4 +1,4 @@
-// Copyright ,2025 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,10 +20,8 @@
 #ifndef SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
 #define SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
 
-#include <diagnostic_updater/diagnostic_updater.hpp>
-
 #include <string>
-#include <map>
+#include <vector>
 
 /**
  * @brief CPU temperature information
@@ -51,8 +49,6 @@ struct CpuFrequencyInfo
 
 struct TemperatureData
 {
-  using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
-
   float elapsed_ms;
   int summary_status;
   std::string summary_message;
