@@ -36,6 +36,7 @@
 #include <regex>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace bp = boost::process;
 namespace fs = boost::filesystem;
