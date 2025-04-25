@@ -118,10 +118,9 @@ void CPUMonitorBase::checkTemperature()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  std::lock_guard<std::mutex> lock(mutex_);
-  temperature_data_.clear();
-
   if (temperatures_.empty()) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    temperature_data_.clear();
     temperature_data_.summary_status = DiagStatus::ERROR;
     temperature_data_.summary_message = "temperature files not found";
     return;
@@ -129,6 +128,7 @@ void CPUMonitorBase::checkTemperature()
 
   int level = DiagStatus::OK;
   std::string error_str = "";
+  std::vector<TemperatureData::CoreTemperature> temporary_core_data{};
 
   for (const auto & entry : temperatures_) {
     // Read temperature file
@@ -136,7 +136,7 @@ void CPUMonitorBase::checkTemperature()
     fs::ifstream ifs(path, std::ios::in);
     if (!ifs) {
       error_str = "file open error";
-      temperature_data_.core_data.emplace_back(TemperatureData::CoreTemperature{
+      temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
         entry.label_, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
       continue;
     }
@@ -145,19 +145,22 @@ void CPUMonitorBase::checkTemperature()
     ifs >> temperature;
     ifs.close();
     temperature /= 1000;
-    temperature_data_.core_data.emplace_back(
+    temporary_core_data.emplace_back(
       TemperatureData::CoreTemperature{entry.label_, DiagStatus::OK, temperature, "", ""});
   }
 
+  std::lock_guard<std::mutex> lock(mutex_);
+  temperature_data_.clear();
   if (!error_str.empty()) {
     temperature_data_.summary_status = DiagStatus::ERROR;
     temperature_data_.summary_message = error_str;
   } else {
+    temperature_data_.core_data = temporary_core_data;
     temperature_data_.summary_status = level;
     temperature_data_.summary_message = temperature_dictionary_.at(level);
   }
 
-  // Measure elapsed time since start time and report
+  // Measure elapsed time since start time
   const auto t_end = std::chrono::high_resolution_clock::now();
   const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
   temperature_data_.elapsed_ms = elapsed_ms;
@@ -190,13 +193,12 @@ void CPUMonitorBase::updateTemperature(diagnostic_updater::DiagnosticStatusWrapp
 
 void CPUMonitorBase::checkUsage()
 {
-  std::lock_guard<std::mutex> lock(mutex_);
-  usage_data_.core_data.clear();  // Data content is cleared, but memory is not freed
-
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
   if (!mpstat_exists_) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    usage_data_.clear();
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "mpstat error";
     usage_data_.elapsed_ms = 0.0f;
@@ -212,6 +214,8 @@ void CPUMonitorBase::checkUsage()
   // So create file descriptor with O_CLOEXEC and pass it to boost::process.
   int out_fd[2];
   if (pipe2(out_fd, O_CLOEXEC) != 0) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    usage_data_.clear();
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "pipe2 error";
     usage_data_.elapsed_ms = 0.0f;
@@ -224,6 +228,8 @@ void CPUMonitorBase::checkUsage()
 
   int err_fd[2];
   if (pipe2(err_fd, O_CLOEXEC) != 0) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    usage_data_.clear();
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "pipe2 error";
     usage_data_.elapsed_ms = 0.0f;
@@ -236,6 +242,7 @@ void CPUMonitorBase::checkUsage()
 
   int level = DiagStatus::OK;
   int whole_level = DiagStatus::OK;
+  std::vector<UsageData::CpuUsage> temporary_core_data{};
 
   pt::ptree pt;
   try {
@@ -246,6 +253,8 @@ void CPUMonitorBase::checkUsage()
     if (c.exit_code() != 0) {
       std::ostringstream os;
       is_err >> os.rdbuf();
+      std::lock_guard<std::mutex> lock(mutex_);
+      usage_data_.clear();
       usage_data_.summary_status = DiagStatus::ERROR;
       usage_data_.summary_message = "mpstat error";
       usage_data_.elapsed_ms = 0.0f;
@@ -308,12 +317,14 @@ void CPUMonitorBase::checkUsage()
             whole_level = std::max(whole_level, level);
           }
 
-          usage_data_.core_data.emplace_back(
+          temporary_core_data.emplace_back(
             UsageData::CpuUsage{cpu_name, level, usr, nice, sys, iowait, idle, total});
         }
       }
     }
   } catch (const std::exception & e) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    usage_data_.clear();
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "mpstat exception";
     usage_data_.elapsed_ms = 0.0f;
@@ -325,6 +336,9 @@ void CPUMonitorBase::checkUsage()
     return;
   }
 
+  std::lock_guard<std::mutex> lock(mutex_);
+  usage_data_.clear();
+  usage_data_.core_data = temporary_core_data;
   usage_data_.summary_status = whole_level;
   usage_data_.summary_message = load_dictionary_.at(whole_level);
 
@@ -426,9 +440,6 @@ int CPUMonitorBase::CpuUsageToLevel(const std::string & cpu_name, float usage)
 
 void CPUMonitorBase::checkLoad()
 {
-  std::lock_guard<std::mutex> lock(mutex_);
-  load_data_.clear();
-
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
@@ -437,6 +448,8 @@ void CPUMonitorBase::checkLoad()
   std::ifstream ifs("/proc/loadavg", std::ios::in);
 
   if (!ifs) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
     load_data_.elapsed_ms = 0.0f;
@@ -448,6 +461,8 @@ void CPUMonitorBase::checkLoad()
   std::string line;
 
   if (!std::getline(ifs, line)) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
     load_data_.elapsed_ms = 0.0f;
@@ -456,9 +471,10 @@ void CPUMonitorBase::checkLoad()
     return;
   }
 
-  if (
-    sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) !=
+  if (sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) !=
     3) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
     load_data_.elapsed_ms = 0.0f;
@@ -471,6 +487,8 @@ void CPUMonitorBase::checkLoad()
   load_average[1] /= num_cores_;
   load_average[2] /= num_cores_;
 
+  std::lock_guard<std::mutex> lock(mutex_);
+  load_data_.clear();
   load_data_.summary_status = DiagStatus::OK;
   load_data_.summary_message = "OK";
   load_data_.load_average[0] = load_average[0] * 1e2;
@@ -509,18 +527,19 @@ void CPUMonitorBase::checkThermalThrottling(
 
 void CPUMonitorBase::checkFrequency()
 {
-  std::lock_guard<std::mutex> lock(mutex_);
-  frequency_data_.clear();
-
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
   if (frequencies_.empty()) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    frequency_data_.clear();
     frequency_data_.summary_status = DiagStatus::ERROR;
     frequency_data_.summary_message = "frequency files not found";
     frequency_data_.elapsed_ms = 0.0f;
     return;
   }
+
+  std::vector<FrequencyData::CoreFrequency> temporary_core_data{};
 
   for (const auto & entry : frequencies_) {
     // Read scaling_cur_freq file
@@ -529,13 +548,16 @@ void CPUMonitorBase::checkFrequency()
     if (ifs) {
       std::string line;
       if (std::getline(ifs, line)) {
-        frequency_data_.core_data.emplace_back(
+        temporary_core_data.emplace_back(
           FrequencyData::CoreFrequency{entry.index_, DiagStatus::OK, std::stoi(line)});
       }
     }
     ifs.close();
   }
 
+  std::lock_guard<std::mutex> lock(mutex_);
+  frequency_data_.clear();
+  frequency_data_.core_data = temporary_core_data;
   frequency_data_.summary_status = DiagStatus::OK;
   frequency_data_.summary_message = "OK";
 
