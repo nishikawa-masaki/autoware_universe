@@ -471,7 +471,8 @@ void CPUMonitorBase::checkLoad()
     return;
   }
 
-  if (sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) !=
+  if (
+    sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) !=
     3) {
     std::lock_guard<std::mutex> lock(mutex_);
     load_data_.clear();
