@@ -30,7 +30,9 @@
 #include <unistd.h>
 #include <vector>
 
-CpuUsageStatistics::CpuUsageStatistics() : first_call_(true), previous_statistics_()
+CpuUsageStatistics::CpuUsageStatistics()
+  : first_call_(true), statistics_1_(), statistics_2_(),
+    current_statistics_(statistics_1_), previous_statistics_(statistics_2_)
 {
 }
 
@@ -43,7 +45,7 @@ void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & cor
   }
 
   std::string line;
-  std::vector<CpuStatistics> current_statistics;
+  current_statistics_.clear();  // Allocated memory area is not released.
 
   while (std::getline(stat_file, line)) {
     try {
@@ -67,7 +69,7 @@ void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & cor
         >> statistics.guest >> statistics.guest_nice;
 
       statistics.name = cpu_name;
-      current_statistics.push_back(statistics);
+      current_statistics_.push_back(statistics);
     } catch (const std::exception& e) {
       // Log error but continue processing other lines
       continue;
@@ -77,13 +79,13 @@ void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & cor
 
   // If this is the first call, just store the current stats and return empty info
   if (first_call_) {
-    previous_statistics_ = current_statistics;
+    swap_statistics();
     first_call_ = false;
     return;
   }
 
   // Process each CPU's statistics
-  for (const auto & core_info : current_statistics) {
+  for (const auto & core_info : current_statistics_) {
     const std::string & cpu_name = core_info.name;
     const CpuStatistics & stats = core_info;
 
@@ -137,5 +139,10 @@ void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & cor
   }
 
   // Store current stats for next call
-  previous_statistics_ = current_statistics;
+  swap_statistics();
+}
+
+void CpuUsageStatistics::swap_statistics()
+{
+  std::swap(current_statistics_, previous_statistics_);
 }

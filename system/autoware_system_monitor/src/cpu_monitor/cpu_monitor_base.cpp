@@ -188,7 +188,7 @@ void CPUMonitorBase::checkUsage()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  std::vector<CpuUsageStatistics::CoreUsageInfo> core_usage_info;
+  std::vector<CpuUsageStatistics::CoreUsageInfo> core_usage_info;  // TODO(masakinishikawa): Allocated on heap.
   cpu_usage_statistics_.collect_cpu_statistics(core_usage_info);  // May take a while.
 
   std::lock_guard<std::mutex> lock(mutex_);

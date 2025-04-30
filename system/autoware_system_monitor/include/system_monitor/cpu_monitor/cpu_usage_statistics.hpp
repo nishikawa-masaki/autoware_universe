@@ -66,6 +66,11 @@ public:
   void collect_cpu_statistics(std::vector<CoreUsageInfo> & core_usage_info);
 
 private:
+  /**
+   * @brief Swap the current and previous statistics
+   */
+  void swap_statistics();
+
   // Internal structure to hold raw CPU statistics from /proc/stat
   struct CpuStatistics {
     std::string name;  // "all", "0", "1", etc. : short enough for "short string optimization"
@@ -103,7 +108,10 @@ private:
   };
 
   bool first_call_;  // Flag to indicate first call
-  std::vector<CpuStatistics> previous_statistics_;  // Previous CPU statistics
+  std::vector<CpuStatistics> statistics_1_;  // Previous CPU statistics
+  std::vector<CpuStatistics> statistics_2_;  // Previous CPU statistics
+  std::vector<CpuStatistics> & current_statistics_;   // Current CPU statistics
+  std::vector<CpuStatistics> & previous_statistics_;  // Previous CPU statistics
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_USAGE_STATISTICS_HPP_
