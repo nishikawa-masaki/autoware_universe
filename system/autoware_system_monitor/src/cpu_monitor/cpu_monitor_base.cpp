@@ -189,7 +189,7 @@ void CPUMonitorBase::checkUsage()
   const auto t_start = std::chrono::high_resolution_clock::now();
 
   std::vector<CpuUsageStatistics::CoreUsageInfo> core_usage_info;
-  cpu_usage_statistics_.collect_cpu_stats(core_usage_info);  // May take a while.
+  cpu_usage_statistics_.collect_cpu_statistics(core_usage_info);  // May take a while.
 
   std::lock_guard<std::mutex> lock(mutex_);
   usage_data_.clear();

@@ -30,25 +30,27 @@
 #include <unistd.h>
 #include <vector>
 
-CpuUsageStatistics::CpuUsageStatistics() : first_call_(true) {}
+CpuUsageStatistics::CpuUsageStatistics() : first_call_(true), previous_statistics_()
+{
+}
 
-void CpuUsageStatistics::collect_cpu_stats(std::vector<CoreUsageInfo> & core_usage_info)
+void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & core_usage_info)
 {
   // Read current CPU statistics from /proc/stat
   std::ifstream stat_file("/proc/stat");
   if (!stat_file.is_open()) {
     return;
   }
-  
+
   std::string line;
-  std::vector<CpuStats> current_stats;
-  
+  std::vector<CpuStatistics> current_statistics;
+
   while (std::getline(stat_file, line)) {
     try {
       std::istringstream iss(line);
       std::string cpu_name;
       iss >> cpu_name;
-      
+
       // Skip lines that don't start with "cpu"
       if (cpu_name.substr(0, 3) != "cpu") {
         continue;
@@ -58,41 +60,41 @@ void CpuUsageStatistics::collect_cpu_stats(std::vector<CoreUsageInfo> & core_usa
       } else {
         cpu_name = cpu_name.substr(3);
       }
-      
-      CpuStats stats;
-      iss >> stats.user >> stats.nice >> stats.system >> stats.idle 
-        >> stats.iowait >> stats.irq >> stats.softirq >> stats.steal 
-        >> stats.guest >> stats.guest_nice;
-      
-      stats.name = cpu_name;
-      current_stats.push_back(stats);
+
+      CpuStatistics statistics;
+      iss >> statistics.user >> statistics.nice >> statistics.system >> statistics.idle
+        >> statistics.iowait >> statistics.irq >> statistics.softirq >> statistics.steal
+        >> statistics.guest >> statistics.guest_nice;
+
+      statistics.name = cpu_name;
+      current_statistics.push_back(statistics);
     } catch (const std::exception& e) {
       // Log error but continue processing other lines
       continue;
     }
   }
   stat_file.close();
-  
+
   // If this is the first call, just store the current stats and return empty info
   if (first_call_) {
-    prev_stats_ = current_stats;
+    previous_statistics_ = current_statistics;
     first_call_ = false;
     return;
   }
-  
+
   // Process each CPU's statistics
-  for (const auto & core_info : current_stats) {
+  for (const auto & core_info : current_statistics) {
     const std::string & cpu_name = core_info.name;
-    const CpuStats & stats = core_info;
-    
+    const CpuStatistics & stats = core_info;
+
     // Skip if we don't have previous stats for this CPU
-    auto prev_iter = std::find_if(prev_stats_.begin(), prev_stats_.end(), [cpu_name](const CpuStats & stats) {
-      return stats.name == cpu_name;
-    });
-    if (prev_iter == prev_stats_.end()) {
+    auto prev_iter =
+      std::find_if(previous_statistics_.begin(), previous_statistics_.end(),
+        [cpu_name](const CpuStatistics & statistics) { return statistics.name == cpu_name; });
+    if (prev_iter == previous_statistics_.end()) {
       continue;
     }
-    
+
     // Calculate deltas
     uint64_t user_delta = stats.user - prev_iter->user;
     uint64_t nice_delta = stats.nice - prev_iter->nice;
@@ -104,12 +106,12 @@ void CpuUsageStatistics::collect_cpu_stats(std::vector<CoreUsageInfo> & core_usa
     uint64_t steal_delta = stats.steal - prev_iter->steal;
     uint64_t guest_delta = stats.guest - prev_iter->guest;
     uint64_t guest_nice_delta = stats.guest_nice - prev_iter->guest_nice;
-    
+
     // Calculate total time delta
-    uint64_t total_delta = user_delta + nice_delta + system_delta + 
+    uint64_t total_delta = user_delta + nice_delta + system_delta +
                           iowait_delta + irq_delta + softirq_delta + steal_delta;
     uint64_t total_all_delta = total_delta + idle_delta;
-    
+
     // Skip if total time delta is zero
     if (total_all_delta == 0) {
       continue;
@@ -133,7 +135,7 @@ void CpuUsageStatistics::collect_cpu_stats(std::vector<CoreUsageInfo> & core_usa
     // Add to CPU info
     core_usage_info.push_back(core_usage);
   }
-  
+
   // Store current stats for next call
-  prev_stats_ = current_stats;
+  previous_statistics_ = current_statistics;
 }

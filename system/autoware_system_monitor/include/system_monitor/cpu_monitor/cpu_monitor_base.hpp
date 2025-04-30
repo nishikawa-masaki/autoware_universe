@@ -182,7 +182,7 @@ protected:
    */
   const std::map<int, const char *> thermal_dictionary_ = {
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "unused"}, {DiagStatus::ERROR, "throttling"}};
-  
+
   /**
    * @brief CPU usage statistics
    */

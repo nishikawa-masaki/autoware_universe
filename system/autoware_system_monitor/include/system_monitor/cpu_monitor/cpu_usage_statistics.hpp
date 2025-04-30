@@ -30,7 +30,7 @@ public:
 
   // Structure to hold detailed CPU information for each core
   struct CoreUsageInfo {
-    std::string name;           // "all", "0", "1", etc.
+    std::string name;  // "all", "0", "1", etc. : short enough for "short string optimization"
     float user_percent;         // Percentage of time spent in user mode
     float nice_percent;         // Percentage of time spent in nice mode
     float system_percent;       // Percentage of time spent in system mode
@@ -42,7 +42,7 @@ public:
     float guest_percent;        // Percentage of time spent running a virtual CPU
     float gnice_percent;        // Percentage of time spent running a niced guest
     float total_usage_percent;  // Total CPU usage percentage (100% - idle%)
-  
+
     // Constructor with default values
     CoreUsageInfo() :
       name(""),
@@ -63,12 +63,12 @@ public:
    * @brief Collect CPU statistics and calculate usage percentages
    * @param [out] core_usage_info Vector to store the collected CPU usage information
    */
-  void collect_cpu_stats(std::vector<CoreUsageInfo> & core_usage_info);
+  void collect_cpu_statistics(std::vector<CoreUsageInfo> & core_usage_info);
 
 private:
   // Internal structure to hold raw CPU statistics from /proc/stat
-  struct CpuStats {
-    std::string name;  // "all", "0", "1", etc.
+  struct CpuStatistics {
+    std::string name;  // "all", "0", "1", etc. : short enough for "short string optimization"
     uint64_t user;
     uint64_t nice;
     uint64_t system;
@@ -79,22 +79,22 @@ private:
     uint64_t steal;
     uint64_t guest;
     uint64_t guest_nice;
-    
+
     // Calculate total time (excluding idle)
     uint64_t total() const {
       return user + nice + system + iowait + irq + softirq + steal;
     }
-    
+
     // Calculate total time including idle
     uint64_t total_all() const {
       return total() + idle;
     }
-    
+
     // Calculate CPU usage percentage
-    float usage_percent(const CpuStats& prev) const {
-      uint64_t total_delta = total() - prev.total();
-      uint64_t total_all_delta = total_all() - prev.total_all();
-      
+    float usage_percent(const CpuStatistics & previous_statistics) const {
+      uint64_t total_delta = total() - previous_statistics.total();
+      uint64_t total_all_delta = total_all() - previous_statistics.total_all();
+
       if (total_all_delta == 0) {
         return 0.0f;
       }
@@ -103,7 +103,7 @@ private:
   };
 
   bool first_call_;  // Flag to indicate first call
-  std::vector<CpuStats> prev_stats_;  // Previous CPU statistics
+  std::vector<CpuStatistics> previous_statistics_;  // Previous CPU statistics
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_USAGE_STATISTICS_HPP_
