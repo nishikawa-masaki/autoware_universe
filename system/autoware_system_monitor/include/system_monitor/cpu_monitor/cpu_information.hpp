@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /**
- * @file cpu_information.h
+ * @file cpu_information.hpp
  * @brief information about CPUs/cores
  */
 

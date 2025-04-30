@@ -21,6 +21,7 @@
 #define SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_
 
 #include "system_monitor/cpu_monitor/cpu_information.hpp"
+#include "system_monitor/cpu_monitor/cpu_usage_statistics.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -181,6 +182,11 @@ protected:
    */
   const std::map<int, const char *> thermal_dictionary_ = {
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "unused"}, {DiagStatus::ERROR, "throttling"}};
+  
+  /**
+   * @brief CPU usage statistics
+   */
+  CpuUsageStatistics cpu_usage_statistics_;
 
   // Publisher
   rclcpp::Publisher<tier4_external_api_msgs::msg::CpuUsage>::SharedPtr pub_cpu_usage_;

@@ -70,6 +70,7 @@ message(STATUS "GPU PLATFORM: " ${CMAKE_GPU_PLATFORM})
 set(CPU_MONITOR_SOURCE
   src/cpu_monitor/cpu_monitor_base.cpp
   src/cpu_monitor/${CMAKE_CPU_PLATFORM}_cpu_monitor.cpp
+  src/cpu_monitor/cpu_usage_statistics.cpp
 )
 
 ament_auto_add_library(cpu_monitor_lib SHARED
