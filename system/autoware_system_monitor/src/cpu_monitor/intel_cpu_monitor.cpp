@@ -41,8 +41,17 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 {
   msr_reader_port_ = declare_parameter<int>("msr_reader_port", 7634);
 
-  this->getTemperatureFileNames();
-  this->getFrequencyFileNames();
+  this->getTemperatureFileNames();  //CPUMonitorBase's method
+  this->getFrequencyFileNames();    //CPUMonitorBase's method
+}
+
+CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+  : CPUMonitorBase(node_name, options)
+{
+  msr_reader_port_ = declare_parameter<int>("msr_reader_port", 7634);
+
+  this->getTemperatureFileNames();  //CPUMonitorBase's method
+  this->getFrequencyFileNames();    //CPUMonitorBase's method
 }
 
 void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)
@@ -153,6 +162,8 @@ void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrap
 
 void CPUMonitor::getTemperatureFileNames()
 {
+  printf("Intel CPUMonitor::getTemperatureFileNames() called.\n");
+  fflush(stdout);
   const fs::path root("/sys/devices/platform/coretemp.0");
 
   if (!fs::exists(root)) {
@@ -188,6 +199,8 @@ void CPUMonitor::getTemperatureFileNames()
     }
     ifs.close();
     temperatures_.push_back(temperature);
+    printf("temperatures file: label %s path %s\n", temperature.label_.c_str(), temperature.path_.c_str());
+    fflush(stdout);
   }
 
   std::sort(

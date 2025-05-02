@@ -24,6 +24,7 @@
 #include "system_monitor/cpu_monitor/cpu_usage_statistics.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_external_api_msgs/msg/cpu_status.hpp>
 #include <tier4_external_api_msgs/msg/cpu_usage.hpp>
@@ -69,7 +70,7 @@ protected:
 
   /**
    * @brief convert Cpu Usage To diagnostic Level
-   * @param [cpu_name] mpstat cpu name
+   * @param [cpu_name] cpu name (all, 0, 1, etc.)
    * @param [usage] cpu usage value
    * @return DiagStatus::OK or WARN or ERROR
    */
@@ -157,7 +158,6 @@ protected:
   std::vector<int> usage_warn_check_count_;  //!< @brief CPU list for usage over warn check counter
   std::vector<int>
     usage_error_check_count_;  //!< @brief CPU list for usage over error check counter
-  bool mpstat_exists_;         //!< @brief Check if mpstat command exists
 
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error

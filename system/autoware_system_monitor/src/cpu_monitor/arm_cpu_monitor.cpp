@@ -28,6 +28,11 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 {
 }
 
+CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+  : CPUMonitorBase(node_name, options)
+{
+}
+
 void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
 {
   // TODO(Fumihito Ito): implement me

@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020,2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,8 +57,6 @@ public:
   void addFreqName(int index, const std::string & path) { freqs_.emplace_back(index, path); }
   void clearFreqNames() { freqs_.clear(); }
 
-  void setMpstatExists(bool mpstat_exists) { mpstat_exists_ = mpstat_exists; }
-
   void changeUsageWarn(float usage_warn) { usage_warn_ = usage_warn; }
   void changeUsageError(float usage_error) { usage_error_ = usage_error; }
 
@@ -74,7 +72,7 @@ public:
 
   bool findDiagStatus(const std::string & name, DiagStatus & status)  // NOLINT
   {
-    for (int i = 0; i < array_.status.size(); ++i) {
+    for (size_t i = 0; i < array_.status.size(); ++i) {
       if (removePrefix(array_.status[i].name) == name) {
         status = array_.status[i];
         return true;
@@ -96,15 +94,12 @@ public:
     // Get directory of executable
     const fs::path exe_path(argv_[0]);
     exe_dir_ = exe_path.parent_path().generic_string();
-    // Get dummy executable path
-    mpstat_ = exe_dir_ + "/mpstat";
   }
 
 protected:
   std::unique_ptr<TestCPUMonitor> monitor_;
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr sub_;
   std::string exe_dir_;
-  std::string mpstat_;
 
   void SetUp()
   {
@@ -114,16 +109,12 @@ protected:
     monitor_ = std::make_unique<TestCPUMonitor>("test_cpu_monitor", node_options);
     sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
       "/diagnostics", 1000, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
-    monitor_->getTempNames();
-    monitor_->getFreqNames();
+    monitor_->getTemperatureFileNames();
+    monitor_->getFrequencyFileNames();
 
     // Remove test file if exists
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
-    }
-    // Remove dummy executable if exists
-    if (fs::exists(mpstat_)) {
-      fs::remove(mpstat_);
     }
   }
 
@@ -132,10 +123,6 @@ protected:
     // Remove test file if exists
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
-    }
-    // Remove dummy executable if exists
-    if (fs::exists(mpstat_)) {
-      fs::remove(mpstat_);
     }
     rclcpp::shutdown();
   }
@@ -430,30 +417,6 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
   }
 }
 
-TEST_F(CPUMonitorTestSuite, usageMpstatNotFoundTest)
-{
-  // Set flag false
-  monitor_->setMpstatExists(false);
-
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-
-  // Verify
-  DiagStatus status;
-  std::string value;
-  ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
-  ASSERT_EQ(status.level, DiagStatus::ERROR);
-  ASSERT_STREQ(status.message.c_str(), "mpstat error");
-  ASSERT_TRUE(findValue(status, "mpstat", value));
-  ASSERT_STREQ(
-    value.c_str(),
-    "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat");
-}
-
 TEST_F(CPUMonitorTestSuite, load1WarnTest)
 {
   // Verify normal behavior
@@ -599,55 +562,6 @@ TEST_F(CPUMonitorTestSuite, freqFrequencyFilesNotFoundTest)
   ASSERT_STREQ(status.message.c_str(), "frequency files not found");
 }
 
-TEST_F(CPUMonitorTestSuite, usageMpstatErrorTest)
-{
-  // Symlink mpstat1 to mpstat
-  fs::create_symlink(exe_dir_ + "/mpstat1", mpstat_);
-
-  // Modify PATH temporarily
-  modifyPath();
-
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-
-  // Verify
-  DiagStatus status;
-  std::string value;
-
-  ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
-  ASSERT_EQ(status.level, DiagStatus::ERROR);
-  ASSERT_STREQ(status.message.c_str(), "mpstat error");
-  ASSERT_TRUE(findValue(status, "mpstat", value));
-}
-
-TEST_F(CPUMonitorTestSuite, usageMpstatExceptionTest)
-{
-  // Symlink mpstat2 to mpstat
-  fs::create_symlink(exe_dir_ + "/mpstat2", mpstat_);
-
-  // Modify PATH temporarily
-  modifyPath();
-
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-
-  // Verify
-  DiagStatus status;
-  std::string value;
-
-  ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
-  ASSERT_EQ(status.level, DiagStatus::ERROR);
-  ASSERT_STREQ(status.message.c_str(), "mpstat exception");
-}
-
 // for coverage
 class DummyCPUMonitor : public CPUMonitorBase
 {
@@ -666,8 +580,8 @@ TEST_F(CPUMonitorTestSuite, dummyCPUMonitorTest)
   rclcpp::NodeOptions options;
   std::unique_ptr<DummyCPUMonitor> monitor =
     std::make_unique<DummyCPUMonitor>("dummy_cpu_monitor", options);
-  monitor->getTempNames();
-  monitor->getFreqNames();
+  monitor->getTemperatureFileNames();
+  monitor->getFrequencyFileNames();
   // Publish topic
   monitor->update();
 }

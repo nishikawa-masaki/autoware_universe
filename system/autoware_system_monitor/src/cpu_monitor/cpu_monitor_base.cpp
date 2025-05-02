@@ -139,6 +139,13 @@ void CPUMonitorBase::checkTemperature()
     temperature /= 1000;
     temporary_core_data.emplace_back(
       TemperatureData::CoreTemperature{entry.label_, DiagStatus::OK, temperature, "", ""});
+    if (temperature > 90) {
+      level = DiagStatus::ERROR;
+      error_str = "temperature over 90C";
+    } else if (temperature > 80) {
+      level = DiagStatus::WARN;
+      error_str = "temperature over 80C";
+    }
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
@@ -294,10 +301,10 @@ int CPUMonitorBase::CpuUsageToLevel(const std::string & cpu_name, float usage)
     }
     idx = num + 1;
   } catch (std::exception &) {
-    if (cpu_name == std::string("all")) {  // mpstat output "all"
+    if (cpu_name == std::string("all")) {  // system cpu usage : See /proc/stat in "man 5 proc"
       idx = 0;
     } else {
-      idx = num_cores_ + 1;
+      idx = num_cores_ + 1;  // individual cpu usage : See /proc/stat in "man 5 proc"
     }
   }
 
@@ -476,6 +483,8 @@ void CPUMonitorBase::updateFrequency(diagnostic_updater::DiagnosticStatusWrapper
 
 void CPUMonitorBase::getTemperatureFileNames()
 {
+  printf("CPUMonitorBase::getTemperatureFileNames() called.\n");
+  fflush(stdout);
   RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::getTemperatureFileNames not implemented.");
 }
 
