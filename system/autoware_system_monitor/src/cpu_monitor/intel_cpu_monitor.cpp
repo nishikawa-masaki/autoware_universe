@@ -40,9 +40,12 @@ namespace fs = boost::filesystem;
 CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cpu_monitor", options)
 {
   msr_reader_port_ = declare_parameter<int>("msr_reader_port", 7634);
+}
 
-  this->getTemperatureFileNames();
-  this->getFrequencyFileNames();
+CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+  : CPUMonitorBase(node_name, options)
+{
+  msr_reader_port_ = declare_parameter<int>("msr_reader_port", 7634);
 }
 
 void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)

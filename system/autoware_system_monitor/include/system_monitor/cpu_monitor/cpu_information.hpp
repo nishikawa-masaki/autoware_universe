@@ -58,7 +58,8 @@ struct TemperatureData
   struct CoreTemperature
   {
     std::string label;
-    int status;
+    int status;  //!< @brief Error if temperature data is not available.
+    int level;   //!< @brief Level of temperature.
     float temperature;
     std::string error_key;
     std::string error_value;
@@ -70,7 +71,7 @@ struct TemperatureData
     elapsed_ms = 0.0f;
     summary_status = 0;
     summary_message.clear();
-    core_data.clear();
+    core_data.clear();  // Allocated heap memory is not released.
   }
 };
 
@@ -102,7 +103,7 @@ struct UsageData
     summary_message.clear();
     error_key.clear();
     error_value.clear();
-    core_data.clear();
+    core_data.clear();  // Allocated heap memory is not released.
   }
 };
 

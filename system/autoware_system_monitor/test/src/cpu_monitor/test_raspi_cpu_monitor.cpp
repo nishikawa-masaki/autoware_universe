@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020,2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,11 +50,11 @@ public:
     array_ = *diag_msg;
   }
 
-  void addTempName(const std::string & path) { temps_.emplace_back(path, path); }
-  void clearTempNames() { temps_.clear(); }
+  void addTempName(const std::string & label, const std::string & path) { temperatures_.emplace_back(label, path); }
+  void clearTempNames() { temperatures_.clear(); }
 
-  void addFreqName(int index, const std::string & path) { freqs_.emplace_back(index, path); }
-  void clearFreqNames() { freqs_.clear(); }
+  void addFreqName(int index, const std::string & path) { frequencies_.emplace_back(index, path); }
+  void clearFreqNames() { frequencies_.clear(); }
 
   void setMpstatExists(bool mpstat_exists) { mpstat_exists_ = mpstat_exists; }
 
@@ -73,7 +73,7 @@ public:
 
   bool findDiagStatus(const std::string & name, DiagStatus & status)  // NOLINT
   {
-    for (int i = 0; i < array_.status.size(); ++i) {
+    for (size_t i = 0; i < array_.status.size(); ++i) {
       if (removePrefix(array_.status[i].name) == name) {
         status = array_.status[i];
         return true;
@@ -113,8 +113,6 @@ protected:
     monitor_ = std::make_unique<TestCPUMonitor>("test_cpu_monitor", node_options);
     sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
       "/diagnostics", 1000, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
-    monitor_->getTempNames();
-    monitor_->getFreqNames();
 
     // Remove test file if exists
     if (fs::exists(TEST_FILE)) {
@@ -178,7 +176,7 @@ TEST_F(CPUMonitorTestSuite, tempWarnTest)
   }
 
   // Add test file to list
-  monitor_->addTempName(TEST_FILE);
+  monitor_->addTempName("CPU Dummy", TEST_FILE);
 
   // Verify warning
   {
@@ -237,7 +235,7 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
   }
 
   // Add test file to list
-  monitor_->addTempName(TEST_FILE);
+  monitor_->addTempName("CPU Dummy", TEST_FILE);
 
   // Verify error
   {
@@ -300,7 +298,7 @@ TEST_F(CPUMonitorTestSuite, tempTemperatureFilesNotFoundTest)
 TEST_F(CPUMonitorTestSuite, tempFileOpenErrorTest)
 {
   // Add test file to list
-  monitor_->addTempName(TEST_FILE);
+  monitor_->addTempName("CPU Dummy", TEST_FILE);
 
   // Publish topic
   monitor_->update();
@@ -669,9 +667,7 @@ class DummyCPUMonitor : public CPUMonitorBase
 
 public:
   DummyCPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
-  : CPUMonitorBase(node_name, options)
-  {
-  }
+  : CPUMonitorBase(node_name, options) {}
   void update() { updater_.force_update(); }
 };
 
@@ -680,8 +676,6 @@ TEST_F(CPUMonitorTestSuite, dummyCPUMonitorTest)
   rclcpp::NodeOptions options;
   std::unique_ptr<DummyCPUMonitor> monitor =
     std::make_unique<DummyCPUMonitor>("dummy_cpu_monitor", options);
-  monitor->getTempNames();
-  monitor->getFreqNames();
   // Publish topic
   monitor->update();
 }

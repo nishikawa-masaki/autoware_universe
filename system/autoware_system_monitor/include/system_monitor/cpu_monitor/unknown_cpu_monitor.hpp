@@ -32,6 +32,13 @@ public:
    * @param [in] options Options associated with this node.
    */
   explicit CPUMonitor(const rclcpp::NodeOptions & options);
+
+  /**
+   * @brief constructor with node_name argument, required by TestCPUMonitor
+   * @param [in] node_name The name of the node instance.
+   * @param [in] options   Options associated with this node.
+   */
+  CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options);
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__UNKNOWN_CPU_MONITOR_HPP_

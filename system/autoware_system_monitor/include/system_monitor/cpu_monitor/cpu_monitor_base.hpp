@@ -23,6 +23,7 @@
 #include "system_monitor/cpu_monitor/cpu_information.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_external_api_msgs/msg/cpu_status.hpp>
 #include <tier4_external_api_msgs/msg/cpu_usage.hpp>
@@ -52,23 +53,13 @@ protected:
   CPUMonitorBase(const std::string & node_name, const rclcpp::NodeOptions & options);
 
   /**
-   * @brief get names for core temperature files
-   */
-  virtual void getTemperatureFileNames();
-
-  /**
-   * @brief get names for cpu frequency files
-   */
-  virtual void getFrequencyFileNames();
-
-  /**
    * @brief check CPU temperature
    */
   virtual void checkTemperature();
 
   /**
    * @brief convert Cpu Usage To diagnostic Level
-   * @param [cpu_name] mpstat cpu name
+   * @param [cpu_name] cpu name (all, 0, 1, etc.)
    * @param [usage] cpu usage value
    * @return DiagStatus::OK or WARN or ERROR
    */
@@ -147,8 +138,12 @@ protected:
    */
   virtual void publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usage);
 
+  // Updater won't be changed after initialization. No need to protect it with mutex.
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
+  std::mutex mutex_context_;  //!< @brief mutex for protecting context
+  // Unit tests change these variables.
+  // So we need to protect them with mutex.
   char hostname_[HOST_NAME_MAX + 1];              //!< @brief host name
   int num_cores_;                                 //!< @brief number of cores
   std::vector<CpuTemperatureInfo> temperatures_;  //!< @brief CPU list for temperature
@@ -158,6 +153,7 @@ protected:
     usage_error_check_count_;  //!< @brief CPU list for usage over error check counter
   bool mpstat_exists_;         //!< @brief Check if mpstat command exists
 
+  // Parameters are read-only after initialization. No need to protect them with mutex.
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error
   int usage_warn_count_;   //!< @brief continuous count over usage_warn_ to generate warning
@@ -188,11 +184,25 @@ protected:
   rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect cpu statistics
   rclcpp::CallbackGroup::SharedPtr timer_callback_group_;  //!< @brief Callback Group
 
-  std::mutex mutex_;                  //!< @brief mutex for protecting snapshot
+  std::mutex mutex_snapshot_;         //!< @brief mutex for protecting snapshot
   TemperatureData temperature_data_;  //!< @brief snapshot of CPU temperature
   UsageData usage_data_;              //!< @brief snapshot of CPU usage
   LoadData load_data_;                //!< @brief snapshot of CPU load average
   FrequencyData frequency_data_;      //!< @brief snapshot of CPU frequency
+
+private:
+  /**
+   * @brief get names for core temperature files
+   */
+  virtual void getTemperatureFileNames();
+
+  /**
+   * @brief get names for cpu frequency files
+   */
+  virtual void getFrequencyFileNames();
+
+  volatile bool is_temperature_file_names_initialized_;
+  volatile bool is_frequency_file_names_initialized_;
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_

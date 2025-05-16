@@ -25,5 +25,10 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 {
 }
 
+CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+  : CPUMonitorBase(node_name, options)
+{
+}
+
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(CPUMonitor)

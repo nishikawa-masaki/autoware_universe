@@ -55,6 +55,13 @@ public:
    */
   explicit CPUMonitor(const rclcpp::NodeOptions & options);
 
+  /**
+   * @brief constructor with node_name argument, required by TestCPUMonitor
+   * @param [in] node_name The name of the node instance.
+   * @param [in] options   Options associated with this node.
+   */
+  CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options);
+
 protected:
   /**
    * @brief get names for core temperature files

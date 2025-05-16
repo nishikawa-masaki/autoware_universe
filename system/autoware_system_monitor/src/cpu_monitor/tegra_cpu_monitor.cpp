@@ -31,6 +31,13 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
   updater_.removeByName("CPU Thermal Throttling");
 }
 
+CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+  : CPUMonitorBase(node_name, options)
+{
+  // There is no event record for thermal throttling.
+  updater_.removeByName("CPU Thermal Throttling");
+}
+
 void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
 {
 }
