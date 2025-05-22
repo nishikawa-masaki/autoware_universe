@@ -69,13 +69,43 @@ protected:
   void getTemperatureFileNames() override;
 
   /**
-   * @brief check CPU thermal throttling
+   * @brief update CPU thermal throttling (implementation)
+   */
+  void checkThermalThrottlingImpl() override;
+
+  /**
+   * @brief update CPU thermal throttling (implementation)
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
    */
-  void checkThermalThrottling(
+  void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
+
+  // The format of Thermal Throttling report depends on CPU model.
+  // So, Thermal Throttling report is implemented in derived class.
+
+  struct ThermalThrottlingData
+  {
+    float elapsed_ms;
+    int summary_status;
+    std::string summary_message;
+    std::string error_key;
+    std::string error_value;
+    std::string status;
+
+    void clear()
+    {
+      elapsed_ms = 0.0f;
+      summary_status = 0;
+      summary_message.clear();
+      error_key.clear();
+      error_value.clear();
+      status.clear();
+    }
+  };
+
+  ThermalThrottlingData thermal_throttling_data_;
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__RASPI_CPU_MONITOR_HPP_

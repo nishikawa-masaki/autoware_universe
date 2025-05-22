@@ -91,7 +91,7 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   updater_.add("CPU Frequency", this, &CPUMonitorBase::updateFrequency);
   // Data format of ThermalThrottling differs among platforms.
   // So checking of status and updating of diagnostic are executed simultaneously.
-  updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::checkThermalThrottling);
+  updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::updateThermalThrottling);
 
   // Publisher
   rclcpp::QoS durable_qos{1};
@@ -231,6 +231,8 @@ void CPUMonitorBase::updateTemperature(diagnostic_updater::DiagnosticStatusWrapp
 
 void CPUMonitorBase::checkUsage()
 {
+  printf("checkUsage()\n");
+  fflush(stdout);
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
@@ -245,6 +247,8 @@ void CPUMonitorBase::checkUsage()
       usage_data_.error_key = "mpstat";
       usage_data_.error_value =
         "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat";
+      printf("checkUsage(): mpstat error\n");
+      fflush(stdout);
       return;
     }
   }  // End of critical section
@@ -262,6 +266,8 @@ void CPUMonitorBase::checkUsage()
     usage_data_.elapsed_ms = 0.0f;
     usage_data_.error_key = "pipe2";
     usage_data_.error_value = strerror(errno);
+    printf("checkUsage(): pipe2 error\n");
+    fflush(stdout);
     return;
   }
   bp::pipe out_pipe{out_fd[0], out_fd[1]};
@@ -276,6 +282,8 @@ void CPUMonitorBase::checkUsage()
     usage_data_.elapsed_ms = 0.0f;
     usage_data_.error_key = "pipe2";
     usage_data_.error_value = strerror(errno);
+    printf("checkUsage(): pipe2 error\n");
+    fflush(stdout);
     return;
   }
   bp::pipe err_pipe{err_fd[0], err_fd[1]};
@@ -289,6 +297,7 @@ void CPUMonitorBase::checkUsage()
   try {
     // Execution of mpstat command takes 1 second.
     // On failure, it will throw an exception or return non-zero exit code.
+    bp::child x("which mpstat");
     bp::child c("mpstat -P ALL 1 1 -o JSON", bp::std_out > is_out, bp::std_err > is_err);
     c.wait();
     if (c.exit_code() != 0) {
@@ -301,6 +310,8 @@ void CPUMonitorBase::checkUsage()
       usage_data_.elapsed_ms = 0.0f;
       usage_data_.error_key = "mpstat";
       usage_data_.error_value = os.str();
+      printf("checkUsage(): mpstat error\n");
+      fflush(stdout);
       return;
     }
     // Analyze JSON output
@@ -374,9 +385,13 @@ void CPUMonitorBase::checkUsage()
     std::fill(usage_warn_check_count_.begin(), usage_warn_check_count_.end(), 0);
     std::fill(usage_error_check_count_.begin(), usage_error_check_count_.end(), 0);
     usage_data_.core_data.clear();
+    printf("checkUsage(): mpstat exception\n");
+    fflush(stdout);
     return;
   }
 
+  printf("checkUsage(): no error\n");
+  fflush(stdout);
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
   usage_data_.clear();
   usage_data_.core_data = temporary_core_data;
@@ -398,7 +413,10 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
   tier4_external_api_msgs::msg::CpuUsage cpu_usage;
   using CpuStatus = tier4_external_api_msgs::msg::CpuStatus;
 
-  if (usage_data_.summary_status != DiagStatus::OK) {
+  printf("updateUsage(): usage_data_.error_key: %s\n", usage_data_.error_key.c_str());
+  fflush(stdout);
+
+  if (!usage_data_.error_key.empty()) {
     stat.summary(usage_data_.summary_status, usage_data_.summary_message);
     stat.add(usage_data_.error_key, usage_data_.error_value);
     cpu_usage.all.status = CpuStatus::STALE;
@@ -406,6 +424,8 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
     publishCpuUsage(cpu_usage);
     return;
   }
+  printf("updateUsage(): usage_data_.error_key is empty.\n");
+  fflush(stdout);
 
   for (const auto & usage : usage_data_.core_data) {
     CpuStatus cpu_status;
@@ -563,10 +583,22 @@ void CPUMonitorBase::updateLoad(diagnostic_updater::DiagnosticStatusWrapper & st
   stat.addf("execution time", "%f ms", load_data_.elapsed_ms);
 }
 
-void CPUMonitorBase::checkThermalThrottling(
-  [[maybe_unused]] diagnostic_updater::DiagnosticStatusWrapper & stat)
+void CPUMonitorBase::checkThermalThrottling()
 {
   RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::checkThermalThrottling not implemented.");
+}
+
+void CPUMonitorBase::updateThermalThrottling(
+  [[maybe_unused]] diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // Call derived class implementation
+  updateThermalThrottlingImpl(stat);
+}
+
+void CPUMonitorBase::updateThermalThrottlingImpl(
+  [[maybe_unused]] diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
 }
 
 void CPUMonitorBase::checkFrequency()
@@ -579,30 +611,34 @@ void CPUMonitorBase::checkFrequency()
     is_frequency_file_names_initialized_ = true;
   }
 
-  if (frequencies_.empty()) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
-    frequency_data_.clear();
-    frequency_data_.summary_status = DiagStatus::ERROR;
-    frequency_data_.summary_message = "frequency files not found";
-    frequency_data_.elapsed_ms = 0.0f;
-    return;
-  }
-
   std::vector<FrequencyData::CoreFrequency> temporary_core_data{};
-
-  for (const auto & entry : frequencies_) {
-    // Read scaling_cur_freq file
-    const fs::path path(entry.path_);
-    fs::ifstream ifs(path, std::ios::in);
-    if (ifs) {
-      std::string line;
-      if (std::getline(ifs, line)) {
-        temporary_core_data.emplace_back(
-          FrequencyData::CoreFrequency{entry.index_, DiagStatus::OK, std::stoi(line)});
-      }
+  {  // Start of critical section
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    if (frequencies_.empty()) {
+      printf("checkFrequency(): frequencies_ is empty.\n");
+      fflush(stdout);
+      std::lock_guard<std::mutex> lock(mutex_snapshot_);
+      frequency_data_.clear();
+      frequency_data_.summary_status = DiagStatus::ERROR;
+      frequency_data_.summary_message = "frequency files not found";
+      frequency_data_.elapsed_ms = 0.0f;
+      return;
     }
-    ifs.close();
-  }
+
+    for (const auto & entry : frequencies_) {
+      // Read scaling_cur_freq file
+      const fs::path path(entry.path_);
+      fs::ifstream ifs(path, std::ios::in);
+      if (ifs) {
+        std::string line;
+        if (std::getline(ifs, line)) {
+          temporary_core_data.emplace_back(
+            FrequencyData::CoreFrequency{entry.index_, DiagStatus::OK, std::stoi(line)});
+        }
+      }
+      ifs.close();
+    }
+  }  // End of critical section
 
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
   frequency_data_.clear();
@@ -686,4 +722,5 @@ void CPUMonitorBase::onTimer()
   checkUsage();
   checkLoad();
   checkFrequency();
+  checkThermalThrottling();
 }

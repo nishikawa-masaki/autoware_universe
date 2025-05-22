@@ -81,6 +81,13 @@ protected:
   virtual void checkFrequency();
 
   /**
+   * @brief check CPU thermal throttling
+   * @note Data format of ThermalThrottling differs among platforms.
+   * So both of checkThermalThrottling() and updateThermalThrottlingImpl() should be implemented in each derived class.
+   */
+  virtual void checkThermalThrottling();
+
+  /**
    * @brief update CPU temperature
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
@@ -117,14 +124,23 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**
-   * @brief check CPU thermal throttling
+   * @brief update CPU thermal throttling
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  void updateThermalThrottling(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+
+  /**
+   * @brief update CPU thermal throttling
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
    * @note Data format of ThermalThrottling differs among platforms.
-   * So checking of status and updating of diagnostic are executed simultaneously.
+   * So both of checkThermalThrottling() and updateThermalThrottlingImpl() should be implemented in the derived class.
    */
-  virtual void checkThermalThrottling(
+  virtual void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**

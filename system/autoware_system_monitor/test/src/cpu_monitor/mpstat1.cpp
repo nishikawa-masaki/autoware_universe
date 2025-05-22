@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cstdio>
 /**
  * @file mpstat1.cpp
  * @brief dummy mpstat mpstat to return error
  */
 
-int main(int argc, char ** argv)
+int main(int /* argc */, char ** /* argv */)
 {
+  printf("mpstat1 returns -1\n");
+  fflush(stdout);
   return -1;
 }

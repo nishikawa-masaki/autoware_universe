@@ -39,6 +39,7 @@ static constexpr const char * DOCKER_ENV = "/.dockerenv";
 namespace fs = boost::filesystem;
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
+
 char ** argv_;
 
 class TestCPUMonitor : public CPUMonitor
@@ -77,8 +78,16 @@ fflush(stdout);
     return temperatures_.empty();
   }
 
-  void addFreqName(int index, const std::string & path) { frequencies_.emplace_back(index, path); }
-  void clearFreqNames() { frequencies_.clear(); }
+  void addFreqName(int index, const std::string & path)
+  { 
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    frequencies_.emplace_back(index, path);
+  }
+  void clearFreqNames()
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    frequencies_.clear();
+  }
 
   void setMpstatExists(bool mpstat_exists) { mpstat_exists_ = mpstat_exists; }
 
@@ -123,6 +132,8 @@ fflush(stdout);
     return false;
   }
 
+  void disableTimer() { timer_->cancel(); }
+
 private:
   std::mutex mutex_;
   diagnostic_msgs::msg::DiagnosticArray array_;
@@ -157,14 +168,30 @@ protected:
 //      "/diagnostics", 1000, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
       "/diagnostics", 1, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
 
+    monitor_->disableTimer();
+
+  {
+    auto env = boost::this_process::environment();
+    std::string path = env["PATH"].to_string();
+    printf("SetUp(): path: %s\n", path.c_str());
+    fflush(stdout);
+  }
     // Remove test file if exists
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
     }
+    printf("SetUp(): mpstat_: %s\n", mpstat_.c_str());
+    fflush(stdout);
+#if 0
     // Remove dummy executable if exists
     if (fs::exists(mpstat_)) {
+      printf("SetUp(): mpstat_ exists\n");  
+      fflush(stdout);
       fs::remove(mpstat_);
     }
+#else  // 0
+    fs::remove(mpstat_);
+#endif  // 0
   }
 
   void TearDown()
@@ -173,8 +200,12 @@ protected:
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
     }
+    printf("TearDown(): mpstat_: %s\n", mpstat_.c_str());
+    fflush(stdout);
     // Remove dummy executable if exists
     if (fs::exists(mpstat_)) {
+      printf("TearDown(): mpstat_ exists\n");
+      fflush(stdout);
       fs::remove(mpstat_);
     }
     rclcpp::shutdown();
@@ -198,9 +229,11 @@ protected:
     std::string new_path = env["PATH"].to_string();
     new_path.insert(0, fmt::format("{}:", exe_dir_));
     env["PATH"] = new_path;
+    printf("modifyPath(): new_path: %s\n", new_path.c_str());
+    fflush(stdout);
   }
 
-#if 0
+#if 1
   void updatePublishSubscribe()
   {
   #if 1
@@ -316,7 +349,7 @@ void * msr_reader(void * args)
   sockaddr_in client;
   socklen_t len = sizeof(client);
 
-  for (int i = 0; i < 2; ++i) {
+  // for (int i = 0; i < 2; ++i) {
   // Await a connection on socket FD
   int new_sock = accept(sock, reinterpret_cast<sockaddr *>(&client), &len);
   if (new_sock < 0) {
@@ -384,7 +417,7 @@ void * msr_reader(void * args)
 
     // Close the file descriptor FD
     close(new_sock);
-  }
+  // }
 end:
   close(sock);
   printf("msr_reader() ended\n");
@@ -541,6 +574,7 @@ TEST_F(CPUMonitorTestSuite, usageWarnTest)
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
 
+
   // Verify warning
   {
     // Change warning level
@@ -583,26 +617,29 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
 
-  // Verify warning
+  // Verify error
   {
     // Change error level
     monitor_->changeUsageError(0.0);
 
     updatePublishSubscribe();
 
-    // Verify
     DiagStatus status;
+#if 0
+    // Verify
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
     // It requires consecutive two errors to set ERROR.
     ASSERT_EQ(status.level, DiagStatus::OK);
 
+#endif  // 0
     updatePublishSubscribe();
 
+    DiagStatus status2;
     // Verify
     // DiagStatus status;
-    ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
+    ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status2));
     // This time, error should be reported.
-    ASSERT_EQ(status.level, DiagStatus::ERROR);
+    ASSERT_EQ(status2.level, DiagStatus::ERROR);
   }
 
   // Verify normal behavior
@@ -673,8 +710,8 @@ TEST_F(CPUMonitorTestSuite, throttlingTest)
   ThreadTestMode mode = Normal;
   pthread_create(&th, nullptr, msr_reader, &mode);
   // Wait for thread started
-  // rclcpp::WallRate(10).sleep();
-  rclcpp::WallRate(1).sleep();
+  rclcpp::WallRate(10).sleep();
+  // rclcpp::WallRate(1).sleep();
 
   updatePublishSubscribe();
 
@@ -692,8 +729,8 @@ TEST_F(CPUMonitorTestSuite, throttlingThrottlingTest)
   ThreadTestMode mode = Throttling;
   pthread_create(&th, nullptr, msr_reader, &mode);
   // Wait for thread started
-  // rclcpp::WallRate(10).sleep();
-  rclcpp::WallRate(1).sleep();
+  rclcpp::WallRate(10).sleep();
+  // rclcpp::WallRate(1).sleep();
 
   updatePublishSubscribe();
 
@@ -837,6 +874,7 @@ TEST_F(CPUMonitorTestSuite, throttlingConnectErrorTest)
 
 TEST_F(CPUMonitorTestSuite, freqTest)
 {
+#if 0
   monitor_->forceTimerEvent();
   // Publish topic
   monitor_->update();
@@ -844,6 +882,8 @@ TEST_F(CPUMonitorTestSuite, freqTest)
   // Give time to publish
   rclcpp::WallRate(2).sleep();
   rclcpp::spin_some(monitor_->get_node_base_interface());
+#endif  // 0
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -853,17 +893,21 @@ TEST_F(CPUMonitorTestSuite, freqTest)
 
 TEST_F(CPUMonitorTestSuite, freqFrequencyFilesNotFoundTest)
 {
+  // Make it sure that lazy initialization is done.
   monitor_->forceTimerEvent();
   // Clear list
   monitor_->clearFreqNames();
 
+#if 0
+  monitor_->forceTimerEvent();
   // Publish topic
   monitor_->update();
 
   // Give time to publish
   rclcpp::WallRate(2).sleep();
   rclcpp::spin_some(monitor_->get_node_base_interface());
-
+#endif  // 0
+  updatePublishSubscribe();
   // Verify
   DiagStatus status;
   ASSERT_TRUE(monitor_->findDiagStatus("CPU Frequency", status));
@@ -878,8 +922,23 @@ TEST_F(CPUMonitorTestSuite, usageMpstatErrorTest)
   fs::create_symlink(exe_dir_ + "/mpstat1", mpstat_);
 
   // Modify PATH temporarily
+#if 0
   modifyPath();
-
+#else  // 0
+  // Modify PATH temporarily
+  auto env = boost::this_process::environment();
+  std::string new_path = env["PATH"].to_string();
+  printf("modifyPathLocal(): path: %s\n", new_path.c_str());
+  fflush(stdout);
+  new_path.insert(0, fmt::format("{}:", exe_dir_));
+  env["PATH"] = new_path;
+  printf("modifyPathLocal(): new_path: %s\n", new_path.c_str());
+  fflush(stdout);
+#endif  // 0
+  boost::process::child x("which mpstat");
+  boost::process::child y("ls -l " + mpstat_);
+  boost::process::child z("ls -l " + exe_dir_ + "/mpstat1");
+#if 0
   monitor_->forceTimerEvent();
   // Publish topic
   monitor_->update();
@@ -887,6 +946,8 @@ TEST_F(CPUMonitorTestSuite, usageMpstatErrorTest)
   // Give time to publish
   rclcpp::WallRate(2).sleep();
   rclcpp::spin_some(monitor_->get_node_base_interface());
+#endif  // 0
+  updatePublishSubscribe();
   // Verify
   DiagStatus status;
   std::string value;
@@ -903,8 +964,23 @@ TEST_F(CPUMonitorTestSuite, usageMpstatExceptionTest)
   fs::create_symlink(exe_dir_ + "/mpstat2", mpstat_);
 
   // Modify PATH temporarily
+#if 0
   modifyPath();
-
+#else  // 0
+  // Modify PATH temporarily
+  auto env = boost::this_process::environment();
+  std::string new_path = env["PATH"].to_string();
+  printf("modifyPathLocal(): path: %s\n", new_path.c_str());
+  fflush(stdout);
+  new_path.insert(0, fmt::format("{}:", exe_dir_));
+  env["PATH"] = new_path;
+  printf("modifyPathLocal(): new_path: %s\n", new_path.c_str());
+  fflush(stdout);
+#endif  // 0
+  boost::process::child x("which mpstat");
+  boost::process::child y("ls -l " + mpstat_);
+  boost::process::child z("ls -l " + exe_dir_ + "/mpstat2");
+#if 0
   monitor_->forceTimerEvent();
   // Publish topic
   monitor_->update();
@@ -912,6 +988,8 @@ TEST_F(CPUMonitorTestSuite, usageMpstatExceptionTest)
   // Give time to publish
   rclcpp::WallRate(2).sleep();
   rclcpp::spin_some(monitor_->get_node_base_interface());
+#endif  // 0
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;

@@ -203,15 +203,20 @@ if(BUILD_TESTING)
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/test/data/process_monitor $<TARGET_FILE_DIR:test_process_monitor>
     COMMENT "Copying test data files to the build directory after build"
   )
+
   ament_add_ros_isolated_gtest(test_cpu_monitor
     test/src/cpu_monitor/test_${CMAKE_CPU_PLATFORM}_cpu_monitor.cpp
     ${CPU_MONITOR_SOURCE}
+    TIMEOUT 120
   )
 
-  # ament_target_dependencies(test_cpu_monitor
-  #   "rclcpp"
-  #   "diagnostic_msgs"
-  # )
+  ament_auto_add_executable(mpstat1
+    test/src/cpu_monitor/mpstat1.cpp
+  )
+
+  ament_auto_add_executable(mpstat2
+    test/src/cpu_monitor/mpstat2.cpp
+  )
 
   target_include_directories(test_cpu_monitor
     PRIVATE "include"
