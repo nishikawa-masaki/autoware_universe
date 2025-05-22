@@ -157,14 +157,15 @@ protected:
   // Updater won't be changed after initialization. No need to protect it with mutex.
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
-  std::mutex mutex_context_;  //!< @brief mutex for protecting context
+  std::mutex mutex_context_;  //!< @brief mutex for protecting the class context
   // Unit tests change these variables.
-  // So we need to protect them with mutex.
+  // So we need to protect them with mutex_context_.
   char hostname_[HOST_NAME_MAX + 1];              //!< @brief host name
   int num_cores_;                                 //!< @brief number of cores
   std::vector<CpuTemperatureInfo> temperatures_;  //!< @brief CPU list for temperature
   std::vector<CpuFrequencyInfo> frequencies_;     //!< @brief CPU list for frequency
-  std::vector<int> usage_warn_check_count_;  //!< @brief CPU list for usage over warn check counter
+  std::vector<int>
+    usage_warn_check_count_;   //!< @brief CPU list for usage over warn check counter
   std::vector<int>
     usage_error_check_count_;  //!< @brief CPU list for usage over error check counter
   bool mpstat_exists_;         //!< @brief Check if mpstat command exists
@@ -208,17 +209,19 @@ protected:
 
 private:
   /**
-   * @brief get names for core temperature files
+   * @brief get names of core temperature files
    */
   virtual void getTemperatureFileNames();
 
   /**
-   * @brief get names for cpu frequency files
+   * @brief get names of cpu frequency files
    */
   virtual void getFrequencyFileNames();
 
-  volatile bool is_temperature_file_names_initialized_;
-  volatile bool is_frequency_file_names_initialized_;
+  // File name lists are initialized at the first call of onTimer()
+  // so that virtual functions can be called. Lazy initialization.
+  std::atomic<bool> is_temperature_file_names_initialized_;
+  std::atomic<bool> is_frequency_file_names_initialized_;
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_

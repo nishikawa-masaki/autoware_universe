@@ -124,27 +124,21 @@ void CPUMonitorBase::checkTemperature()
   int total_level = DiagStatus::OK;
   std::string error_str = "";
   std::vector<TemperatureData::CoreTemperature> temporary_core_data{};
-  {  // Start of critical section
+  {
+    // Start of critical section for protecting the class context
+    //  from race condition with unit tests.
     std::lock_guard<std::mutex> lock(mutex_context_);
-    // Initialize temperature file names if not initialized
-    if (!is_temperature_file_names_initialized_) {
-      printf("checkTemperature(): is_temperature_file_names_initialized_ is false.\n");
-      fflush(stdout);
+    // Lazy initialization for polymorphism.
+    if (!is_temperature_file_names_initialized_.exchange(true)) {
       getTemperatureFileNames();
-      is_temperature_file_names_initialized_ = true;
     }
     if (temperatures_.empty()) {
       std::lock_guard<std::mutex> lock(mutex_snapshot_);
-printf("checkTemperature(): temperature_ is empty.\n");
-fflush(stdout);
       temperature_data_.clear();
       temperature_data_.summary_status = DiagStatus::ERROR;
       temperature_data_.summary_message = "temperature files not found";
       return;
     }
-printf("checkTemperature(): temperature_ is not empty.\n");
-printf("temperature_ size: %lu\n", temperatures_.size());
-fflush(stdout);
 
     for (const auto & entry : temperatures_) {
       // Read temperature file
@@ -174,10 +168,9 @@ fflush(stdout);
       temperature /= 1000;
       temporary_core_data.emplace_back(
         TemperatureData::CoreTemperature{entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
-      printf("%s: temperature: %f, core_level: %d, level: %d\n", entry.label_.c_str(), temperature, core_level, total_level);
-      fflush(stdout);
     }
-  }  // End of critical section
+    // End of critical section
+  }
 
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
   temperature_data_.clear();
@@ -200,39 +193,21 @@ fflush(stdout);
 void CPUMonitorBase::updateTemperature(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
-  std::string error_str = "";
 
   for (const auto & entry : temperature_data_.core_data) {
     if (entry.status == DiagStatus::OK) {
        stat.addf(entry.label, "%.1f DegC", entry.temperature);
     } else {
-      // A fatal error occurred at least once.
-      error_str = entry.error_key;
       stat.add(entry.error_key, entry.error_value);
     }
-    printf("update: %s: temperature: %f, core_level: %d, level: %d\n", entry.label.c_str(), entry.temperature, entry.status, temperature_data_.summary_status);
-    fflush(stdout);
   }
 
-#if 0
-  if (temperature_data_.summary_status != DiagStatus::OK) {
-    stat.summary(temperature_data_.summary_status, temperature_data_.summary_message);
-  } else if (!error_str.empty()) {
-    stat.summary(temperature_data_.summary_status, error_str);
-  } else {
-    int level = temperature_data_.summary_status;
-    stat.summary(level, temperature_dictionary_.at(level));
-  }
-#else  // 0
   stat.summary(temperature_data_.summary_status, temperature_data_.summary_message);
-#endif  // 0
   stat.addf("execution time", "%f ms", temperature_data_.elapsed_ms);
 }
 
 void CPUMonitorBase::checkUsage()
 {
-  printf("checkUsage()\n");
-  fflush(stdout);
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
@@ -247,8 +222,6 @@ void CPUMonitorBase::checkUsage()
       usage_data_.error_key = "mpstat";
       usage_data_.error_value =
         "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat";
-      printf("checkUsage(): mpstat error\n");
-      fflush(stdout);
       return;
     }
   }  // End of critical section
@@ -266,8 +239,6 @@ void CPUMonitorBase::checkUsage()
     usage_data_.elapsed_ms = 0.0f;
     usage_data_.error_key = "pipe2";
     usage_data_.error_value = strerror(errno);
-    printf("checkUsage(): pipe2 error\n");
-    fflush(stdout);
     return;
   }
   bp::pipe out_pipe{out_fd[0], out_fd[1]};
@@ -282,8 +253,6 @@ void CPUMonitorBase::checkUsage()
     usage_data_.elapsed_ms = 0.0f;
     usage_data_.error_key = "pipe2";
     usage_data_.error_value = strerror(errno);
-    printf("checkUsage(): pipe2 error\n");
-    fflush(stdout);
     return;
   }
   bp::pipe err_pipe{err_fd[0], err_fd[1]};
@@ -297,7 +266,6 @@ void CPUMonitorBase::checkUsage()
   try {
     // Execution of mpstat command takes 1 second.
     // On failure, it will throw an exception or return non-zero exit code.
-    bp::child x("which mpstat");
     bp::child c("mpstat -P ALL 1 1 -o JSON", bp::std_out > is_out, bp::std_err > is_err);
     c.wait();
     if (c.exit_code() != 0) {
@@ -310,8 +278,6 @@ void CPUMonitorBase::checkUsage()
       usage_data_.elapsed_ms = 0.0f;
       usage_data_.error_key = "mpstat";
       usage_data_.error_value = os.str();
-      printf("checkUsage(): mpstat error\n");
-      fflush(stdout);
       return;
     }
     // Analyze JSON output
@@ -385,13 +351,9 @@ void CPUMonitorBase::checkUsage()
     std::fill(usage_warn_check_count_.begin(), usage_warn_check_count_.end(), 0);
     std::fill(usage_error_check_count_.begin(), usage_error_check_count_.end(), 0);
     usage_data_.core_data.clear();
-    printf("checkUsage(): mpstat exception\n");
-    fflush(stdout);
     return;
   }
 
-  printf("checkUsage(): no error\n");
-  fflush(stdout);
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
   usage_data_.clear();
   usage_data_.core_data = temporary_core_data;
@@ -413,9 +375,6 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
   tier4_external_api_msgs::msg::CpuUsage cpu_usage;
   using CpuStatus = tier4_external_api_msgs::msg::CpuStatus;
 
-  printf("updateUsage(): usage_data_.error_key: %s\n", usage_data_.error_key.c_str());
-  fflush(stdout);
-
   if (!usage_data_.error_key.empty()) {
     stat.summary(usage_data_.summary_status, usage_data_.summary_message);
     stat.add(usage_data_.error_key, usage_data_.error_value);
@@ -424,8 +383,6 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
     publishCpuUsage(cpu_usage);
     return;
   }
-  printf("updateUsage(): usage_data_.error_key is empty.\n");
-  fflush(stdout);
 
   for (const auto & usage : usage_data_.core_data) {
     CpuStatus cpu_status;
@@ -606,17 +563,16 @@ void CPUMonitorBase::checkFrequency()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  if (!is_frequency_file_names_initialized_) {
-    getFrequencyFileNames();
-    is_frequency_file_names_initialized_ = true;
-  }
-
   std::vector<FrequencyData::CoreFrequency> temporary_core_data{};
-  {  // Start of critical section
+  {
+    // Start of critical section for protecting the class context
+    //  from race condition with unit tests.
     std::lock_guard<std::mutex> lock(mutex_context_);
+    // Lazy initialization for polymorphism.
+    if (!is_frequency_file_names_initialized_.exchange(true)) {
+      getFrequencyFileNames();
+    }
     if (frequencies_.empty()) {
-      printf("checkFrequency(): frequencies_ is empty.\n");
-      fflush(stdout);
       std::lock_guard<std::mutex> lock(mutex_snapshot_);
       frequency_data_.clear();
       frequency_data_.summary_status = DiagStatus::ERROR;
@@ -637,8 +593,10 @@ void CPUMonitorBase::checkFrequency()
         }
       }
       ifs.close();
+      // TODO(masakinishikawa): Add error handling
     }
-  }  // End of critical section
+    // End of critical section
+  }
 
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
   frequency_data_.clear();
