@@ -33,14 +33,15 @@
 #include <thread>
 #include <vector>
 
-static constexpr const char * TEST_FILE = "test";
-static constexpr const char * DOCKER_ENV = "/.dockerenv";
-
 namespace fs = boost::filesystem;
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
+namespace {
+  constexpr const char * TEST_FILE = "test";
+  constexpr const char * DOCKER_ENV = "/.dockerenv";
 
-char ** argv_;
+  char ** argv_;
+}  // namespace
 
 class TestCPUMonitor : public CPUMonitor
 {
@@ -54,8 +55,6 @@ public:
 
   void diagCallback(const diagnostic_msgs::msg::DiagnosticArray::ConstSharedPtr diag_msg)
   {
-    printf("diagCallback\n");
-    fflush(stdout);
     std::lock_guard<std::mutex> lock(mutex_);
     array_ = *diag_msg;
   }
@@ -69,9 +68,6 @@ public:
   {
     std::lock_guard<std::mutex> lock(mutex_context_);
     temperatures_.clear();
-printf("clearTempNames(): temperature_ is now empty.\n");
-printf("temperature_ size: %lu\n", temperatures_.size());
-fflush(stdout);
   }
   bool isTempNamesEmpty() {
     std::lock_guard<std::mutex> lock(mutex_context_);
@@ -96,19 +92,12 @@ fflush(stdout);
 
   void update()
   {
-    printf("force_update() entered.\n");
-    fflush(stdout);
     updater_.force_update();
-    printf("force_update() exited.\n");
-    fflush(stdout);
   }
+
   void forceTimerEvent()
   {
-    printf("forceTimerEvent() entered.\n");
-    fflush(stdout);
     this->onTimer();
-    printf("forceTimerEvent() exited.\n");
-    fflush(stdout);
   }
 
   const std::string removePrefix(const std::string & name)
@@ -120,10 +109,6 @@ fflush(stdout);
   {
     std::lock_guard<std::mutex> lock(mutex_);
     for (size_t i = 0; i < array_.status.size(); ++i) {
-      printf("array_.status[i].name: %s\n", array_.status[i].name.c_str());
-      printf("array_.status[i].level: %d\n", array_.status[i].level);
-      printf("array_.status[i].message: %s\n", array_.status[i].message.c_str());
-      fflush(stdout);
       if (removePrefix(array_.status[i].name) == name) {
         status = array_.status[i];
         return true;
@@ -150,6 +135,9 @@ public:
     exe_dir_ = exe_path.parent_path().generic_string();
     // Get dummy executable path
     mpstat_ = exe_dir_ + "/mpstat";
+    // Save environment variable PATH before modification
+    auto env = boost::this_process::environment();
+    original_path_ = env["PATH"].to_string();
   }
 
 protected:
@@ -157,9 +145,14 @@ protected:
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr sub_;
   std::string exe_dir_;
   std::string mpstat_;
+  std::string original_path_;
 
   void SetUp()
   {
+    // The environment varialble PATH should be restored
+    // before creating the instance of TestCPUMonitor.
+    restorePath();
+
     using std::placeholders::_1;
     rclcpp::init(0, nullptr);
     rclcpp::NodeOptions node_options;
@@ -168,30 +161,20 @@ protected:
 //      "/diagnostics", 1000, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
       "/diagnostics", 1, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
 
+    // If the timer is enabled, it will interfere with the test.
+    // NOTE:
+    //   Though disabling the timer is necessary for the test,
+    //   it makes the test run in a single thread context,
+    //   different from the real case.
     monitor_->disableTimer();
 
-  {
-    auto env = boost::this_process::environment();
-    std::string path = env["PATH"].to_string();
-    printf("SetUp(): path: %s\n", path.c_str());
-    fflush(stdout);
-  }
     // Remove test file if exists
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
     }
-    printf("SetUp(): mpstat_: %s\n", mpstat_.c_str());
-    fflush(stdout);
-#if 0
-    // Remove dummy executable if exists
-    if (fs::exists(mpstat_)) {
-      printf("SetUp(): mpstat_ exists\n");  
-      fflush(stdout);
-      fs::remove(mpstat_);
-    }
-#else  // 0
+    // Try to remove the symlink any way.
+    // fs::exists() tests existence of the destination file, not the symlink.
     fs::remove(mpstat_);
-#endif  // 0
   }
 
   void TearDown()
@@ -200,15 +183,12 @@ protected:
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
     }
-    printf("TearDown(): mpstat_: %s\n", mpstat_.c_str());
-    fflush(stdout);
-    // Remove dummy executable if exists
-    if (fs::exists(mpstat_)) {
-      printf("TearDown(): mpstat_ exists\n");
-      fflush(stdout);
-      fs::remove(mpstat_);
-    }
+    // Try to remove the dummy executable any way.
+    // fs::exists() tests existence of a destination file, not for a symlink.
+    fs::remove(mpstat_);
     rclcpp::shutdown();
+
+    restorePath();
   }
 
   bool findValue(const DiagStatus status, const std::string & key, std::string & value)  // NOLINT
@@ -229,60 +209,26 @@ protected:
     std::string new_path = env["PATH"].to_string();
     new_path.insert(0, fmt::format("{}:", exe_dir_));
     env["PATH"] = new_path;
-    printf("modifyPath(): new_path: %s\n", new_path.c_str());
-    fflush(stdout);
   }
 
-#if 1
+  void restorePath()
+  {
+    auto env = boost::this_process::environment();
+    env["PATH"] = original_path_;
+  }
+
   void updatePublishSubscribe()
   {
-  #if 1
     monitor_->forceTimerEvent();
     // Publish topic
     monitor_->update();
     
     // Give time to publish
     rclcpp::WallRate(2).sleep();
-  #else  // 0
-    using namespace std::chrono_literals;
-    // Give time to publish
-    rclcpp::WallRate(3s).sleep();
-  #endif  // 0
-    printf("spin_some() entered.\n");
-    fflush(stdout);
     rclcpp::spin_some(monitor_->get_node_base_interface());
-    printf("spin_some() exited.\n");
-    fflush(stdout);
   }
-#else // 0
-  void updatePublishSubscribe()
-  {
-    while (!monitor_->timer_->is_ready()) {
-      printf("timer is not ready\n");
-      fflush(stdout);
-      rclcpp::WallRate(2).sleep();
-    }
-    printf("spin_some() entered. : 1\n");
-    fflush(stdout);
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-    printf("spin_some() exited. : 1\n");
-    fflush(stdout);
-
-    // Publish topic
-    monitor_->update();
-    
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    printf("spin_some() entered. : 2\n");
-    fflush(stdout);
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-    printf("spin_some() exited. : 2\n");
-    fflush(stdout);
-  }
-#endif  // 0
 
 };
-
 
 enum ThreadTestMode {
   Normal = 0,
@@ -298,15 +244,11 @@ pthread_mutex_t mutex;
 
 void * msr_reader(void * args)
 {
-  printf("msr_reader() started\n");
-  fflush(stdout);
   ThreadTestMode * mode = reinterpret_cast<ThreadTestMode *>(args);
 
   // Create a new socket
   int sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock < 0) {
-    printf("socket() failed\n");
-    fflush(stdout);
     return nullptr;
   }
 
@@ -316,8 +258,6 @@ void * msr_reader(void * args)
   ret = setsockopt(
     sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), (socklen_t)sizeof(opt));
   if (ret < 0) {
-    printf("setsockopt() failed\n");
-    fflush(stdout);
     close(sock);
     return nullptr;
   }
@@ -331,8 +271,6 @@ void * msr_reader(void * args)
   // cppcheck-suppress cstyleCast
   ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
-    printf("bind() failed\n");
-    fflush(stdout);
     close(sock);
     return nullptr;
   }
@@ -340,8 +278,6 @@ void * msr_reader(void * args)
   // Prepare to accept connections on socket FD
   ret = listen(sock, 5);
   if (ret < 0) {
-    printf("listen() failed\n");
-    fflush(stdout);
     close(sock);
     return nullptr;
   }
@@ -353,14 +289,10 @@ void * msr_reader(void * args)
   // Await a connection on socket FD
   int new_sock = accept(sock, reinterpret_cast<sockaddr *>(&client), &len);
   if (new_sock < 0) {
-    printf("accept() failed\n");
-    fflush(stdout);
     close(sock);
     return nullptr;
   }
 
-  printf("accept() succeeded\n");
-  fflush(stdout);
   ret = 0;
   std::ostringstream oss;
   boost::archive::text_oarchive oa(oss);
@@ -420,8 +352,6 @@ void * msr_reader(void * args)
   // }
 end:
   close(sock);
-  printf("msr_reader() ended\n");
-  fflush(stdout);
   return nullptr;
 }
 
@@ -573,7 +503,6 @@ TEST_F(CPUMonitorTestSuite, usageWarnTest)
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
-
 
   // Verify warning
   {
@@ -874,15 +803,6 @@ TEST_F(CPUMonitorTestSuite, throttlingConnectErrorTest)
 
 TEST_F(CPUMonitorTestSuite, freqTest)
 {
-#if 0
-  monitor_->forceTimerEvent();
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-#endif  // 0
   updatePublishSubscribe();
 
   // Verify
@@ -898,16 +818,8 @@ TEST_F(CPUMonitorTestSuite, freqFrequencyFilesNotFoundTest)
   // Clear list
   monitor_->clearFreqNames();
 
-#if 0
-  monitor_->forceTimerEvent();
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-#endif  // 0
   updatePublishSubscribe();
+
   // Verify
   DiagStatus status;
   ASSERT_TRUE(monitor_->findDiagStatus("CPU Frequency", status));
@@ -922,32 +834,10 @@ TEST_F(CPUMonitorTestSuite, usageMpstatErrorTest)
   fs::create_symlink(exe_dir_ + "/mpstat1", mpstat_);
 
   // Modify PATH temporarily
-#if 0
   modifyPath();
-#else  // 0
-  // Modify PATH temporarily
-  auto env = boost::this_process::environment();
-  std::string new_path = env["PATH"].to_string();
-  printf("modifyPathLocal(): path: %s\n", new_path.c_str());
-  fflush(stdout);
-  new_path.insert(0, fmt::format("{}:", exe_dir_));
-  env["PATH"] = new_path;
-  printf("modifyPathLocal(): new_path: %s\n", new_path.c_str());
-  fflush(stdout);
-#endif  // 0
-  boost::process::child x("which mpstat");
-  boost::process::child y("ls -l " + mpstat_);
-  boost::process::child z("ls -l " + exe_dir_ + "/mpstat1");
-#if 0
-  monitor_->forceTimerEvent();
-  // Publish topic
-  monitor_->update();
 
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-#endif  // 0
   updatePublishSubscribe();
+
   // Verify
   DiagStatus status;
   std::string value;
@@ -964,31 +854,8 @@ TEST_F(CPUMonitorTestSuite, usageMpstatExceptionTest)
   fs::create_symlink(exe_dir_ + "/mpstat2", mpstat_);
 
   // Modify PATH temporarily
-#if 0
   modifyPath();
-#else  // 0
-  // Modify PATH temporarily
-  auto env = boost::this_process::environment();
-  std::string new_path = env["PATH"].to_string();
-  printf("modifyPathLocal(): path: %s\n", new_path.c_str());
-  fflush(stdout);
-  new_path.insert(0, fmt::format("{}:", exe_dir_));
-  env["PATH"] = new_path;
-  printf("modifyPathLocal(): new_path: %s\n", new_path.c_str());
-  fflush(stdout);
-#endif  // 0
-  boost::process::child x("which mpstat");
-  boost::process::child y("ls -l " + mpstat_);
-  boost::process::child z("ls -l " + exe_dir_ + "/mpstat2");
-#if 0
-  monitor_->forceTimerEvent();
-  // Publish topic
-  monitor_->update();
 
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-#endif  // 0
   updatePublishSubscribe();
 
   // Verify

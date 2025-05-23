@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2020,2025 Autoware Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstdio>
-
 /**
  * @file mpstat2.cpp
  * @brief dummy mpstat executable to provide nothing
@@ -21,7 +19,5 @@
 
 int main(int /* argc */, char ** /* argv */)
 {
-  printf("mpstat2 returns 0\n");
-  fflush(stdout);
   return 0;
 }

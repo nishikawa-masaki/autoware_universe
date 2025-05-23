@@ -50,8 +50,6 @@ CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions 
 
 void CPUMonitor::checkThermalThrottling()
 {
-  printf("Intel CPU Monitor::checkThermalThrottlingl\n");
-  fflush(stdout);
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
@@ -196,8 +194,6 @@ void CPUMonitor::checkThermalThrottling()
 
 void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  printf("Intel CPU Monitor::updateThermalThrottlingImpl\n");
-  fflush(stdout);
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
 
   if (!thermal_throttling_data_.error_key.empty()) {
