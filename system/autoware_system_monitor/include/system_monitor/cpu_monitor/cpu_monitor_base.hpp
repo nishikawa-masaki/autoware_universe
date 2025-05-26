@@ -28,6 +28,7 @@
 #include <tier4_external_api_msgs/msg/cpu_status.hpp>
 #include <tier4_external_api_msgs/msg/cpu_usage.hpp>
 
+#include <atomic>
 #include <climits>
 #include <map>
 #include <mutex>
@@ -133,7 +134,7 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**
-   * @brief update CPU thermal throttling
+   * @brief update CPU thermal throttling implementation
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
@@ -158,7 +159,7 @@ protected:
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
   std::mutex mutex_context_;  //!< @brief mutex for protecting the class context
-  // Unit tests change these variables.
+  // Unit tests modify these variables.
   // So we need to protect them with mutex_context_.
   char hostname_[HOST_NAME_MAX + 1];              //!< @brief host name
   int num_cores_;                                 //!< @brief number of cores

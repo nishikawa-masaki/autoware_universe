@@ -157,8 +157,9 @@ protected:
     rclcpp::init(0, nullptr);
     rclcpp::NodeOptions node_options;
     monitor_ = std::make_unique<TestCPUMonitor>("test_cpu_monitor", node_options);
+    // The queue size is set to 1 so that the result of the changes made by the tests
+    // can be delivered to the topic subscriber immediately.
     sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-//      "/diagnostics", 1000, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
       "/diagnostics", 1, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
 
     // If the timer is enabled, it will interfere with the test.
