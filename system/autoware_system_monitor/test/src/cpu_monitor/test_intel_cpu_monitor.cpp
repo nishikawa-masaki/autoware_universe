@@ -60,25 +60,28 @@ public:
   }
 
   void addTempName(const std::string & label, const std::string & path)
-  { 
+  {
     std::lock_guard<std::mutex> lock(mutex_context_);
     temperatures_.emplace_back(label, path);
   }
+
   void clearTempNames()
   {
     std::lock_guard<std::mutex> lock(mutex_context_);
     temperatures_.clear();
   }
+
   bool isTempNamesEmpty() {
     std::lock_guard<std::mutex> lock(mutex_context_);
     return temperatures_.empty();
   }
 
   void addFreqName(int index, const std::string & path)
-  { 
+  {
     std::lock_guard<std::mutex> lock(mutex_context_);
     frequencies_.emplace_back(index, path);
   }
+
   void clearFreqNames()
   {
     std::lock_guard<std::mutex> lock(mutex_context_);
@@ -120,22 +123,23 @@ public:
   void disableTimer() { timer_->cancel(); }
 
 private:
-  std::mutex mutex_;
+  std::mutex mutex_;  // Protects the diagnostic array.
   diagnostic_msgs::msg::DiagnosticArray array_;
+
   const std::string prefix_ = std::string(this->get_name()) + ": ";
 };
 
 class CPUMonitorTestSuite : public ::testing::Test
 {
 public:
-  CPUMonitorTestSuite()
+  CPUMonitorTestSuite() : monitor_(nullptr), sub_(nullptr)
   {
     // Get directory of executable
     const fs::path exe_path(argv_[0]);
     exe_dir_ = exe_path.parent_path().generic_string();
     // Get dummy executable path
     mpstat_ = exe_dir_ + "/mpstat";
-    // Save environment variable PATH before modification
+    // Save environment variable PATH for restoration
     auto env = boost::this_process::environment();
     original_path_ = env["PATH"].to_string();
   }
@@ -149,8 +153,8 @@ protected:
 
   void SetUp()
   {
-    // The environment varialble PATH should be restored
-    // before creating the instance of TestCPUMonitor.
+    // The environment variable PATH should be restored
+    // before creating an instance of TestCPUMonitor.
     restorePath();
 
     using std::placeholders::_1;
@@ -173,9 +177,11 @@ protected:
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
     }
-    // Try to remove the symlink any way.
-    // fs::exists() tests existence of the destination file, not the symlink.
-    fs::remove(mpstat_);
+    // mpstat_ is a symbolic link.
+    // fs::exists() tests existence of the destination file, not the symbolic link.
+    if (fs::is_symlink(fs::symlink_status(mpstat_))) {
+      fs::remove(mpstat_);
+    }
   }
 
   void TearDown()
@@ -184,9 +190,11 @@ protected:
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
     }
-    // Try to remove the dummy executable any way.
-    // fs::exists() tests existence of a destination file, not for a symlink.
-    fs::remove(mpstat_);
+    // mpstat_ is a symbolic link.
+    // fs::exists() tests existence of the destination file, not the symbolic link.
+    if (fs::is_symlink(fs::symlink_status(mpstat_))) {
+      fs::remove(mpstat_);
+    }
     rclcpp::shutdown();
 
     restorePath();
@@ -223,7 +231,7 @@ protected:
     monitor_->forceTimerEvent();
     // Publish topic
     monitor_->update();
-    
+
     // Give time to publish
     rclcpp::WallRate(2).sleep();
     rclcpp::spin_some(monitor_->get_node_base_interface());
@@ -286,7 +294,6 @@ void * msr_reader(void * args)
   sockaddr_in client;
   socklen_t len = sizeof(client);
 
-  // for (int i = 0; i < 2; ++i) {
   // Await a connection on socket FD
   int new_sock = accept(sock, reinterpret_cast<sockaddr *>(&client), &len);
   if (new_sock < 0) {
@@ -532,8 +539,6 @@ TEST_F(CPUMonitorTestSuite, usageWarnTest)
   }
 }
 
-
-
 TEST_F(CPUMonitorTestSuite, usageErrorTest)
 {
   // Verify normal behavior
@@ -555,21 +560,19 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
     updatePublishSubscribe();
 
     DiagStatus status;
-#if 0
+
     // Verify
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
     // It requires consecutive two errors to set ERROR.
     ASSERT_EQ(status.level, DiagStatus::OK);
 
-#endif  // 0
     updatePublishSubscribe();
 
-    DiagStatus status2;
     // Verify
     // DiagStatus status;
-    ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status2));
+    ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
     // This time, error should be reported.
-    ASSERT_EQ(status2.level, DiagStatus::ERROR);
+    ASSERT_EQ(status.level, DiagStatus::ERROR);
   }
 
   // Verify normal behavior
@@ -660,7 +663,6 @@ TEST_F(CPUMonitorTestSuite, throttlingThrottlingTest)
   pthread_create(&th, nullptr, msr_reader, &mode);
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
-  // rclcpp::WallRate(1).sleep();
 
   updatePublishSubscribe();
 
