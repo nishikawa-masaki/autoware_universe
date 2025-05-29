@@ -38,6 +38,7 @@ void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrap
   // TODO(Fumihito Ito): implement me
 }
 
+// This function is called from a locked context in the timer callback.
 void CPUMonitor::getTemperatureFileNames()
 {
   // Jetson TX1 TX2 Nano: thermal_zone1, Xavier: thermal_zone0

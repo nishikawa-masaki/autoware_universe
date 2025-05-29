@@ -60,7 +60,7 @@ protected:
 
   /**
    * @brief convert Cpu Usage To diagnostic Level
-   * @param [cpu_name] cpu name (all, 0, 1, etc.)
+   * @param [cpu_name] cpu name (all, 0, 1, etc. : compatible with mpstat)
    * @param [usage] cpu usage value
    * @return DiagStatus::OK or WARN or ERROR
    */
@@ -161,6 +161,9 @@ protected:
   std::mutex mutex_context_;  //!< @brief mutex for protecting the class context
   // Unit tests modify these variables.
   // So we need to protect them with mutex_context_.
+  // NOTE:
+  //   Though current implementation of unit tests disables the timer callback,
+  //   the context variables still should be protected by mutex_context_.
   char hostname_[HOST_NAME_MAX + 1];              //!< @brief host name
   int num_cores_;                                 //!< @brief number of cores
   std::vector<CpuTemperatureInfo> temperatures_;  //!< @brief CPU list for temperature
@@ -170,8 +173,7 @@ protected:
   std::vector<int>
     usage_error_check_count_;  //!< @brief CPU list for usage over error check counter
   bool mpstat_exists_;         //!< @brief Check if mpstat command exists
-
-  // Parameters are read-only after initialization. No need to protect them with mutex.
+  // Though parameters are read-only after initialization, unit tests modify them.
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error
   int usage_warn_count_;   //!< @brief continuous count over usage_warn_ to generate warning

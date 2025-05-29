@@ -210,6 +210,7 @@ void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatu
   stat.addf("execution time", "%f ms", thermal_throttling_data_.elapsed_ms);
 }
 
+// This function is called from a locked context in the timer callback.
 void CPUMonitor::getTemperatureFileNames()
 {
   const fs::path root("/sys/devices/platform/coretemp.0");

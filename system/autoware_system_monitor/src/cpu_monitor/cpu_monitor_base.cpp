@@ -211,8 +211,10 @@ void CPUMonitorBase::checkUsage()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
+  bool usage_average = false;
   {  // Start of critical section
     std::lock_guard<std::mutex> lock(mutex_context_);
+    usage_average = usage_average_;  // Copy to local variable for later use.
     if (!mpstat_exists_) {
       std::lock_guard<std::mutex> lock(mutex_snapshot_);
       usage_data_.clear();
@@ -327,7 +329,8 @@ void CPUMonitorBase::checkUsage()
             level = CpuUsageToLevel(std::string("err"), usage);
           }
 
-          if (usage_average_ == true) {
+          // Use local variable to avoid locking.
+          if (usage_average == true) {
             if (cpu_name == "all") {
               whole_level = level;
             }
@@ -341,16 +344,21 @@ void CPUMonitorBase::checkUsage()
       }
     }
   } catch (const std::exception & e) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
-    usage_data_.clear();
-    usage_data_.summary_status = DiagStatus::ERROR;
-    usage_data_.summary_message = "mpstat exception";
-    usage_data_.elapsed_ms = 0.0f;
-    usage_data_.error_key = "mpstat";
-    usage_data_.error_value = e.what();
-    std::fill(usage_warn_check_count_.begin(), usage_warn_check_count_.end(), 0);
-    std::fill(usage_error_check_count_.begin(), usage_error_check_count_.end(), 0);
-    usage_data_.core_data.clear();
+    {
+      std::lock_guard<std::mutex> lock(mutex_snapshot_);
+      usage_data_.clear();
+      usage_data_.summary_status = DiagStatus::ERROR;
+      usage_data_.summary_message = "mpstat exception";
+      usage_data_.elapsed_ms = 0.0f;
+      usage_data_.error_key = "mpstat";
+      usage_data_.error_value = e.what();
+      usage_data_.core_data.clear();
+    }
+    {
+      std::lock_guard<std::mutex> lock(mutex_context_);
+      std::fill(usage_warn_check_count_.begin(), usage_warn_check_count_.end(), 0);
+      std::fill(usage_error_check_count_.begin(), usage_error_check_count_.end(), 0);
+    }
     return;
   }
 
@@ -416,6 +424,7 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
 
 int CPUMonitorBase::CpuUsageToLevel(const std::string & cpu_name, float usage)
 {
+  std::lock_guard<std::mutex> lock(mutex_context_);
   // cpu name to counter index
   int idx;
   try {
@@ -632,6 +641,7 @@ void CPUMonitorBase::getTemperatureFileNames()
   RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::getTemperatureFileNames not implemented.");
 }
 
+// This function is called from a locked context in the timer callback.
 void CPUMonitorBase::getFrequencyFileNames()
 {
   const fs::path root("/sys/devices/system/cpu");

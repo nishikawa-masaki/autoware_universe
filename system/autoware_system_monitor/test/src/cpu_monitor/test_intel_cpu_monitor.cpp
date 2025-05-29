@@ -88,10 +88,23 @@ public:
     frequencies_.clear();
   }
 
-  void setMpstatExists(bool mpstat_exists) { mpstat_exists_ = mpstat_exists; }
+  void setMpstatExists(bool mpstat_exists)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    mpstat_exists_ = mpstat_exists;
+  }
 
-  void changeUsageWarn(float usage_warn) { usage_warn_ = usage_warn; }
-  void changeUsageError(float usage_error) { usage_error_ = usage_error; }
+  void changeUsageWarn(float usage_warn)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    usage_warn_ = usage_warn;
+  }
+
+  void changeUsageError(float usage_error)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    usage_error_ = usage_error;
+  }
 
   void update()
   {
