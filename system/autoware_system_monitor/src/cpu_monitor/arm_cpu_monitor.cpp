@@ -33,7 +33,12 @@ CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions 
 {
 }
 
-void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
+void CPUMonitor::checkThermalThrottling()
+{
+  // TODO(Fumihito Ito): implement me
+}
+
+void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
 {
   // TODO(Fumihito Ito): implement me
 }

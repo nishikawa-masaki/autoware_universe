@@ -38,10 +38,6 @@ CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions 
   updater_.removeByName("CPU Thermal Throttling");
 }
 
-void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
-{
-}
-
 // This function is called from a locked context in the timer callback.
 void CPUMonitor::getTemperatureFileNames()
 {

@@ -71,7 +71,7 @@ protected:
   /**
    * @brief update CPU thermal throttling (implementation)
    */
-  void checkThermalThrottlingImpl() override;
+  void checkThermalThrottling() override;
 
   /**
    * @brief update CPU thermal throttling (implementation)

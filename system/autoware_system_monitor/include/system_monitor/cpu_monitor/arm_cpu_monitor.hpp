@@ -48,11 +48,16 @@ protected:
 
   /**
    * @brief check CPU thermal throttling
+   */
+  void checkThermalThrottling() override;
+
+  /**
+   * @brief update CPU thermal throttling (implementation)
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
    */
-  void checkThermalThrottling(
+  void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 };
 

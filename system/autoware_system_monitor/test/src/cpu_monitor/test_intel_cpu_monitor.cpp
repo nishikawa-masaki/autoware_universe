@@ -26,11 +26,9 @@
 #include <gtest/gtest.h>
 #include <pthread.h>
 
-#include <chrono>
 #include <fstream>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace fs = boost::filesystem;
@@ -116,6 +114,11 @@ public:
     this->onTimer();
   }
 
+  void disableTimer()
+  {
+    timer_->cancel();
+  }
+
   const std::string removePrefix(const std::string & name)
   {
     return boost::algorithm::erase_all_copy(name, prefix_);
@@ -132,8 +135,6 @@ public:
     }
     return false;
   }
-
-  void disableTimer() { timer_->cancel(); }
 
 private:
   std::mutex mutex_;  // Protects the diagnostic array.
@@ -174,17 +175,17 @@ protected:
     rclcpp::init(0, nullptr);
     rclcpp::NodeOptions node_options;
     monitor_ = std::make_unique<TestCPUMonitor>("test_cpu_monitor", node_options);
-    // The queue size is set to 1 so that the result of the changes made by the tests
-    // can be delivered to the topic subscriber immediately.
-    sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics", 1, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
-
     // If the timer is enabled, it will interfere with the test.
     // NOTE:
     //   Though disabling the timer is necessary for the test,
     //   it makes the test run in a single thread context,
     //   different from the real case.
     monitor_->disableTimer();
+
+    // The queue size is set to 1 so that the result of the changes made by the tests
+    // can be delivered to the topic subscriber immediately.
+    sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
+      "/diagnostics", 1, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
 
     // Remove test file if exists
     if (fs::exists(TEST_FILE)) {
@@ -209,7 +210,6 @@ protected:
       fs::remove(mpstat_);
     }
     rclcpp::shutdown();
-
     restorePath();
   }
 
@@ -252,129 +252,136 @@ protected:
 
 };
 
-enum ThreadTestMode {
-  Normal = 0,
-  Throttling,
-  ReturnsError,
-  RecvTimeout,
-  RecvNoData,
-  FormatError,
-};
+namespace msr_reader {
+  enum ThreadTestMode {
+    Normal = 0,
+    Throttling,
+    ReturnsError,
+    RecvTimeout,
+    RecvNoData,
+    FormatError,
+  };
 
-bool stop_thread;
-pthread_mutex_t mutex;
+  bool stop_thread = false;
+  pthread_mutex_t mutex;
 
-void * msr_reader(void * args)
-{
-  ThreadTestMode * mode = reinterpret_cast<ThreadTestMode *>(args);
+  void * msr_reader(void * args)
+  {
+    stop_thread = false;
+    ThreadTestMode * mode = reinterpret_cast<ThreadTestMode *>(args);
 
-  // Create a new socket
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock < 0) {
-    return nullptr;
-  }
+    // Create a new socket
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+      return nullptr;
+    }
 
-  // Allow address reuse
-  int ret = 0;
-  int opt = 1;
-  ret = setsockopt(
-    sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), (socklen_t)sizeof(opt));
-  if (ret < 0) {
-    close(sock);
-    return nullptr;
-  }
+    // Allow address reuse
+    int ret = 0;
+    int opt = 1;
+    ret = setsockopt(
+      sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), (socklen_t)sizeof(opt));
+    if (ret < 0) {
+      close(sock);
+      return nullptr;
+    }
 
-  // Give the socket FD the local address ADDR
-  sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(7634);
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  // cppcheck-suppress cstyleCast
-  ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
-  if (ret < 0) {
-    close(sock);
-    return nullptr;
-  }
+    // Give the socket FD the local address ADDR
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(sockaddr_in));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(7634);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    // cppcheck-suppress cstyleCast
+    ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
+    if (ret < 0) {
+      close(sock);
+      return nullptr;
+    }
 
-  // Prepare to accept connections on socket FD
-  ret = listen(sock, 5);
-  if (ret < 0) {
-    close(sock);
-    return nullptr;
-  }
+    // Prepare to accept connections on socket FD
+    ret = listen(sock, 5);
+    if (ret < 0) {
+      close(sock);
+      return nullptr;
+    }
 
-  sockaddr_in client;
-  socklen_t len = sizeof(client);
+    sockaddr_in client;
+    socklen_t len = sizeof(client);
 
-  // Await a connection on socket FD
-  int new_sock = accept(sock, reinterpret_cast<sockaddr *>(&client), &len);
-  if (new_sock < 0) {
-    close(sock);
-    return nullptr;
-  }
+    // Await a connection on socket FD
+    int new_sock = accept(sock, reinterpret_cast<sockaddr *>(&client), &len);
+    if (new_sock < 0) {
+      close(sock);
+      return nullptr;
+    }
 
-  ret = 0;
-  std::ostringstream oss;
-  boost::archive::text_oarchive oa(oss);
-  MSRInfo msr = {};
+    ret = 0;
+    std::ostringstream oss;
+    boost::archive::text_oarchive oa(oss);
+    MSRInfo msr{};
 
-  switch (*mode) {
-    case Normal:
-      msr.error_code_ = 0;
-      msr.pkg_thermal_status_.push_back(false);
-      oa << msr;
-      ret = write(new_sock, oss.str().c_str(), oss.str().length());
-      break;
+    switch (*mode) {
+      case Normal:
+        msr.error_code_ = 0;
+        msr.pkg_thermal_status_.push_back(false);
+        oa << msr;
+        ret = write(new_sock, oss.str().c_str(), oss.str().length());
+        break;
 
-    case Throttling:
-      msr.error_code_ = 0;
-      msr.pkg_thermal_status_.push_back(true);
-      oa << msr;
-      ret = write(new_sock, oss.str().c_str(), oss.str().length());
-      break;
+      case Throttling:
+        msr.error_code_ = 0;
+        msr.pkg_thermal_status_.push_back(true);
+        oa << msr;
+        ret = write(new_sock, oss.str().c_str(), oss.str().length());
+        break;
 
-    case ReturnsError:
-      msr.error_code_ = EACCES;
-      oa << msr;
-      ret = write(new_sock, oss.str().c_str(), oss.str().length());
-      break;
+      case ReturnsError:
+        msr.error_code_ = EACCES;
+        oa << msr;
+        ret = write(new_sock, oss.str().c_str(), oss.str().length());
+        break;
 
-    case RecvTimeout:
-      // Wait for recv timeout
-      while (true) {
-        pthread_mutex_lock(&mutex);
-        if (stop_thread) {
+      case RecvTimeout:
+        // Wait for recv timeout
+        while (true) {
+          pthread_mutex_lock(&mutex);
+          if (stop_thread) {
+            pthread_mutex_unlock(&mutex);
+            break;
+          }
           pthread_mutex_unlock(&mutex);
-          goto end;
-          // break;
+          sleep(1);
         }
-        pthread_mutex_unlock(&mutex);
-        sleep(1);
-      }
-      break;
+        break;
 
-    case RecvNoData:
-      // Send nothing, close socket immediately
-      break;
+      case RecvNoData:
+        // Send nothing, close socket immediately
+        break;
 
-    case FormatError:
-      // Send wrong data
-      oa << "test";
-      ret = write(new_sock, oss.str().c_str(), oss.str().length());
-      break;
+      case FormatError:
+        // Send wrong data
+        oa << "test";
+        ret = write(new_sock, oss.str().c_str(), oss.str().length());
+        break;
 
-    default:
-      break;
+      default:
+        break;
     }
 
     // Close the file descriptor FD
     close(new_sock);
-  // }
-end:
-  close(sock);
-  return nullptr;
-}
+    close(sock);
+    return nullptr;
+  }
+
+  void stop_msr_reader()
+  {
+    pthread_mutex_lock(&mutex);
+    stop_thread = true;
+    pthread_mutex_unlock(&mutex);
+  }
+}  // namespace msr_reader
 
 TEST_F(CPUMonitorTestSuite, tempWarnTest)
 {
@@ -653,8 +660,8 @@ TEST_F(CPUMonitorTestSuite, load5WarnTest)
 TEST_F(CPUMonitorTestSuite, throttlingTest)
 {
   pthread_t th;
-  ThreadTestMode mode = Normal;
-  pthread_create(&th, nullptr, msr_reader, &mode);
+  msr_reader::ThreadTestMode mode = msr_reader::Normal;
+  pthread_create(&th, nullptr, msr_reader::msr_reader, &mode);
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
   // rclcpp::WallRate(1).sleep();
@@ -672,8 +679,8 @@ TEST_F(CPUMonitorTestSuite, throttlingTest)
 TEST_F(CPUMonitorTestSuite, throttlingThrottlingTest)
 {
   pthread_t th;
-  ThreadTestMode mode = Throttling;
-  pthread_create(&th, nullptr, msr_reader, &mode);
+  msr_reader::ThreadTestMode mode = msr_reader::Throttling;
+  pthread_create(&th, nullptr, msr_reader::msr_reader, &mode);
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
 
@@ -690,8 +697,8 @@ TEST_F(CPUMonitorTestSuite, throttlingThrottlingTest)
 TEST_F(CPUMonitorTestSuite, throttlingReturnsErrorTest)
 {
   pthread_t th;
-  ThreadTestMode mode = ReturnsError;
-  pthread_create(&th, nullptr, msr_reader, &mode);
+  msr_reader::ThreadTestMode mode = msr_reader::ReturnsError;
+  pthread_create(&th, nullptr, msr_reader::msr_reader, &mode);
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
 
@@ -712,8 +719,8 @@ TEST_F(CPUMonitorTestSuite, throttlingReturnsErrorTest)
 TEST_F(CPUMonitorTestSuite, throttlingRecvTimeoutTest)
 {
   pthread_t th;
-  ThreadTestMode mode = RecvTimeout;
-  pthread_create(&th, nullptr, msr_reader, &mode);
+  msr_reader::ThreadTestMode mode = msr_reader::RecvTimeout;
+  pthread_create(&th, nullptr, msr_reader::msr_reader, &mode);
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
 
@@ -722,9 +729,7 @@ TEST_F(CPUMonitorTestSuite, throttlingRecvTimeoutTest)
   monitor_->update();
 
   // Recv timeout occurs, thread is no longer needed
-  pthread_mutex_lock(&mutex);
-  stop_thread = true;
-  pthread_mutex_unlock(&mutex);
+  msr_reader::stop_msr_reader();
   pthread_join(th, NULL);
 
   // Give time to publish
@@ -744,8 +749,8 @@ TEST_F(CPUMonitorTestSuite, throttlingRecvTimeoutTest)
 TEST_F(CPUMonitorTestSuite, throttlingRecvNoDataTest)
 {
   pthread_t th;
-  ThreadTestMode mode = RecvNoData;
-  pthread_create(&th, nullptr, msr_reader, &mode);
+  msr_reader::ThreadTestMode mode = msr_reader::RecvNoData;
+  pthread_create(&th, nullptr, msr_reader::msr_reader, &mode);
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
 
@@ -772,8 +777,8 @@ TEST_F(CPUMonitorTestSuite, throttlingRecvNoDataTest)
 TEST_F(CPUMonitorTestSuite, throttlingFormatErrorTest)
 {
   pthread_t th;
-  ThreadTestMode mode = FormatError;
-  pthread_create(&th, nullptr, msr_reader, &mode);
+  msr_reader::ThreadTestMode mode = msr_reader::FormatError;
+  pthread_create(&th, nullptr, msr_reader::msr_reader, &mode);
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
 

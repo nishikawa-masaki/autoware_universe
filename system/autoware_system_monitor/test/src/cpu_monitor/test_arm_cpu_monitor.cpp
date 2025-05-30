@@ -28,12 +28,14 @@
 #include <string>
 #include <vector>
 
-static constexpr const char * TEST_FILE = "test";
 
 namespace fs = boost::filesystem;
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
-char ** argv_;
+namespace {
+  constexpr const char * TEST_FILE = "test";
+  char ** argv_;
+}  // namespace
 
 class TestCPUMonitor : public CPUMonitor
 {
@@ -47,24 +49,78 @@ public:
 
   void diagCallback(const diagnostic_msgs::msg::DiagnosticArray::ConstSharedPtr diag_msg)
   {
+    std::lock_guard<std::mutex> lock(mutex_);
     array_ = *diag_msg;
   }
 
-  void addTempName(const std::string & path) { temperatures__.emplace_back(path, path); }
-  void clearTempNames() { temperatures__.clear(); }
+  void addTempName(const std::string & label, const std::string & path)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    temperatures_.emplace_back(label, path);
+  }
 
-  void addFreqName(int index, const std::string & path) { frequencies_.emplace_back(index, path); }
-  void clearFreqNames() { frequencies_.clear(); }
+  void clearTempNames()
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    temperatures_.clear();
+  }
 
-  void setMpstatExists(bool mpstat_exists) { mpstat_exists_ = mpstat_exists; }
+  void addFreqName(int index, const std::string & path)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    frequencies_.emplace_back(index, path);
+  }
 
-  void changeUsageWarn(float usage_warn) { usage_warn_ = usage_warn; }
-  void changeUsageError(float usage_error) { usage_error_ = usage_error; }
+  void clearFreqNames()
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    frequencies_.clear();
+  }
 
-  void changeLoad1Warn(float load1_warn) { load1_warn_ = load1_warn; }
-  void changeLoad5Warn(float load5_warn) { load5_warn_ = load5_warn; }
+  void setMpstatExists(bool mpstat_exists)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    mpstat_exists_ = mpstat_exists;
+  }
 
-  void update() { updater_.force_update(); }
+  void changeUsageWarn(float usage_warn)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    usage_warn_ = usage_warn;
+  }
+
+  void changeUsageError(float usage_error)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    usage_error_ = usage_error;
+  }
+
+  void changeLoad1Warn(float load1_warn)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    load1_warn_ = load1_warn;
+  }
+  
+  void changeLoad5Warn(float load5_warn)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    load5_warn_ = load5_warn;
+  }
+
+  void update()
+  {
+    updater_.force_update();
+  }
+
+  void forceTimerEvent()
+  {
+    this->onTimer();
+  }
+
+  void disableTimer()
+  {
+    timer_->cancel();
+  }
 
   const std::string removePrefix(const std::string & name)
   {
@@ -73,6 +129,7 @@ public:
 
   bool findDiagStatus(const std::string & name, DiagStatus & status)  // NOLINT
   {
+    std::lock_guard<std::mutex> lock(mutex_);
     for (size_t i = 0; i < array_.status.size(); ++i) {
       if (removePrefix(array_.status[i].name) == name) {
         status = array_.status[i];
@@ -83,14 +140,16 @@ public:
   }
 
 private:
+  std::mutex mutex_;  // Protects the diagnostic array.
   diagnostic_msgs::msg::DiagnosticArray array_;
+
   const std::string prefix_ = std::string(this->get_name()) + ": ";
 };
 
 class CPUMonitorTestSuite : public ::testing::Test
 {
 public:
-  CPUMonitorTestSuite()
+  CPUMonitorTestSuite() : monitor_(nullptr), sub_(nullptr)
   {
     // Get directory of executable
     const fs::path exe_path(argv_[0]);
@@ -107,19 +166,33 @@ protected:
 
   void SetUp()
   {
+    // The environment variable PATH should be restored
+    // before creating an instance of TestCPUMonitor.
+    restorePath();
+
     using std::placeholders::_1;
     rclcpp::init(0, nullptr);
     rclcpp::NodeOptions node_options;
     monitor_ = std::make_unique<TestCPUMonitor>("test_cpu_monitor", node_options);
+    // If the timer is enabled, it will interfere with the test.
+    // NOTE:
+    //   Though disabling the timer is necessary for the test,
+    //   it makes the test run in a single thread context,
+    //   different from the real case.
+    monitor_->disableTimer();
+
+    // The queue size is set to 1 so that the result of the changes made by the tests
+    // can be delivered to the topic subscriber immediately.
     sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
-      "/diagnostics", 1000, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
+      "/diagnostics", 1, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
 
     // Remove test file if exists
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
     }
-    // Remove dummy executable if exists
-    if (fs::exists(mpstat_)) {
+    // mpstat_ is a symbolic link.
+    // fs::exists() tests existence of the destination file, not the symbolic link.
+    if (fs::is_symlink(fs::symlink_status(mpstat_))) {
       fs::remove(mpstat_);
     }
   }
@@ -130,11 +203,13 @@ protected:
     if (fs::exists(TEST_FILE)) {
       fs::remove(TEST_FILE);
     }
-    // Remove dummy executable if exists
-    if (fs::exists(mpstat_)) {
+    // mpstat_ is a symbolic link.
+    // fs::exists() tests existence of the destination file, not the symbolic link.
+    if (fs::is_symlink(fs::symlink_status(mpstat_))) {
       fs::remove(mpstat_);
     }
     rclcpp::shutdown();
+    restorePath()
   }
 
   bool findValue(const DiagStatus status, const std::string & key, std::string & value)  // NOLINT
@@ -156,6 +231,24 @@ protected:
     new_path.insert(0, fmt::format("{}:", exe_dir_));
     env["PATH"] = new_path;
   }
+
+  void restorePath()
+  {
+    auto env = boost::this_process::environment();
+    env["PATH"] = original_path_;
+  }
+
+  void updatePublishSubscribe()
+  {
+    monitor_->forceTimerEvent();
+    // Publish topic
+    monitor_->update();
+
+    // Give time to publish
+    rclcpp::WallRate(2).sleep();
+    rclcpp::spin_some(monitor_->get_node_base_interface());
+  }
+
 };
 
 TEST_F(CPUMonitorTestSuite, tempWarnTest)

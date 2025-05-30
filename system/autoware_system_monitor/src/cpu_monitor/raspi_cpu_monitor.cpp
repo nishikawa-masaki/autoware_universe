@@ -40,9 +40,6 @@ CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions 
 
 void CPUMonitor::checkThermalThrottling()
 {
-  printf("Raspi CPU Monitor::checkThermalThrottlingl\n");
-  fflush(stdout);
-
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
@@ -87,7 +84,7 @@ void CPUMonitor::checkThermalThrottling()
   thermal_throttling_data_.summary_status = level;
   thermal_throttling_data_.summary_message = thermal_dictionary_.at(level);
 
-  // Measure elapsed time since start time and report
+  // Measure elapsed time since start time.
   const auto t_end = std::chrono::high_resolution_clock::now();
   const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
   thermal_throttling_data_.elapsed_ms = elapsed_ms;
@@ -95,9 +92,6 @@ void CPUMonitor::checkThermalThrottling()
 
 void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
 {
-  printf("Raspi CPU Monitor::updateThermalThrottlingImpl\n");
-  fflush(stdout);
-
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
 
   if (!thermal_throttling_data_.error_key.empty()) {

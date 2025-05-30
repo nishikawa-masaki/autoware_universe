@@ -186,7 +186,7 @@ void CPUMonitor::checkThermalThrottling()
   thermal_throttling_data_.summary_status = whole_level;
   thermal_throttling_data_.summary_message = thermal_dictionary_.at(whole_level);
 
-  // Measure elapsed time since start time and report
+  // Measure elapsed time since start time.
   const auto t_end = std::chrono::high_resolution_clock::now();
   const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
   thermal_throttling_data_.elapsed_ms = elapsed_ms;
