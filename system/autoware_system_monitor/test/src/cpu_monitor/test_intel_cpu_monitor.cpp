@@ -581,17 +581,14 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
 
     DiagStatus status;
 
-    // Verify
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
     // It requires consecutive two errors to set ERROR.
     ASSERT_EQ(status.level, DiagStatus::OK);
 
     updatePublishSubscribe();
 
-    // Verify
-    // DiagStatus status;
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
-    // This time, error should be reported.
+    // This time, ERROR should be reported.
     ASSERT_EQ(status.level, DiagStatus::ERROR);
   }
 

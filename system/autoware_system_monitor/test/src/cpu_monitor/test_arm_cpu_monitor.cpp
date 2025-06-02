@@ -255,12 +255,7 @@ TEST_F(CPUMonitorTestSuite, tempWarnTest)
 {
   // Verify normal behavior
   {
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -269,7 +264,7 @@ TEST_F(CPUMonitorTestSuite, tempWarnTest)
   }
 
   // Add test file to list
-  monitor_->addTempName(TEST_FILE);
+  monitor_->addTempName("CPU Dummy", TEST_FILE);
 
   // Verify warning
   {
@@ -277,12 +272,7 @@ TEST_F(CPUMonitorTestSuite, tempWarnTest)
     std::ofstream ofs(TEST_FILE);
     ofs << 90000 << std::endl;
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -296,12 +286,7 @@ TEST_F(CPUMonitorTestSuite, tempWarnTest)
     std::ofstream ofs(TEST_FILE);
     ofs << 89900 << std::endl;
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -314,12 +299,7 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
 {
   // Verify normal behavior
   {
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -328,7 +308,7 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
   }
 
   // Add test file to list
-  monitor_->addTempName(TEST_FILE);
+  monitor_->addTempName("CPU Dummy", TEST_FILE);
 
   // Verify error
   {
@@ -336,12 +316,7 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
     std::ofstream ofs(TEST_FILE);
     ofs << 95000 << std::endl;
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -355,12 +330,7 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
     std::ofstream ofs(TEST_FILE);
     ofs << 89900 << std::endl;
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -371,15 +341,13 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
 
 TEST_F(CPUMonitorTestSuite, tempTemperatureFilesNotFoundTest)
 {
+  // Make it sure that lazy initialization is done.
+  monitor_->forceTimerEvent();
+
   // Clear list
   monitor_->clearTempNames();
 
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -390,15 +358,13 @@ TEST_F(CPUMonitorTestSuite, tempTemperatureFilesNotFoundTest)
 
 TEST_F(CPUMonitorTestSuite, tempFileOpenErrorTest)
 {
+  // Make it sure that lazy initialization is done.
+  monitor_->forceTimerEvent();
+
   // Add test file to list
-  monitor_->addTempName(TEST_FILE);
+  monitor_->addTempName("CPU Dummy", TEST_FILE);
 
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -414,12 +380,7 @@ TEST_F(CPUMonitorTestSuite, usageWarnTest)
 {
   // Verify normal behavior
   {
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -433,12 +394,7 @@ TEST_F(CPUMonitorTestSuite, usageWarnTest)
     // Change warning level
     monitor_->changeUsageWarn(0.0);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -451,12 +407,7 @@ TEST_F(CPUMonitorTestSuite, usageWarnTest)
     // Change back to normal
     monitor_->changeUsageWarn(0.90);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -469,12 +420,7 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
 {
   // Verify normal behavior
   {
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -483,21 +429,22 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
 
-  // Verify warning
+  // Verify error
   {
     // Change warning level
     monitor_->changeUsageError(0.0);
 
-    // Publish topic
-    monitor_->update();
+    updatePublishSubscribe();
 
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
-
-    // Verify
     DiagStatus status;
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
+    // It requires consecutive two errors to set ERROR.
+    ASSERT_EQ(status.level, DiagStatus::OK);
+
+    updatePublishSubscribe();
+
+    ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
+    // This time, ERROR should be reported.
     ASSERT_EQ(status.level, DiagStatus::ERROR);
   }
 
@@ -506,12 +453,7 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
     // Change back to normal
     monitor_->changeUsageError(1.00);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -525,12 +467,7 @@ TEST_F(CPUMonitorTestSuite, usageMpstatNotFoundTest)
   // Set flag false
   monitor_->setMpstatExists(false);
 
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -567,12 +504,7 @@ TEST_F(CPUMonitorTestSuite, load1WarnTest)
     // Change warning level
     monitor_->changeLoad1Warn(0.0);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -585,12 +517,7 @@ TEST_F(CPUMonitorTestSuite, load1WarnTest)
     // Change back to normal
     monitor_->changeLoad1Warn(0.90);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -603,12 +530,7 @@ TEST_F(CPUMonitorTestSuite, load5WarnTest)
 {
   // Verify normal behavior
   {
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -622,12 +544,7 @@ TEST_F(CPUMonitorTestSuite, load5WarnTest)
     // Change warning level
     monitor_->changeLoad5Warn(0.0);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -640,12 +557,7 @@ TEST_F(CPUMonitorTestSuite, load5WarnTest)
     // Change back to normal
     monitor_->changeLoad5Warn(0.80);
 
-    // Publish topic
-    monitor_->update();
-
-    // Give time to publish
-    rclcpp::WallRate(2).sleep();
-    rclcpp::spin_some(monitor_->get_node_base_interface());
+    updatePublishSubscribe();
 
     // Verify
     DiagStatus status;
@@ -656,12 +568,7 @@ TEST_F(CPUMonitorTestSuite, load5WarnTest)
 
 TEST_F(CPUMonitorTestSuite, DISABLED_throttlingTest)
 {
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -671,12 +578,7 @@ TEST_F(CPUMonitorTestSuite, DISABLED_throttlingTest)
 
 TEST_F(CPUMonitorTestSuite, freqTest)
 {
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -686,15 +588,13 @@ TEST_F(CPUMonitorTestSuite, freqTest)
 
 TEST_F(CPUMonitorTestSuite, freqFrequencyFilesNotFoundTest)
 {
+  // Make it sure that lazy initialization is done.
+  monitor_->forceTimerEvent();
+
   // Clear list
   monitor_->clearFreqNames();
 
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -712,12 +612,7 @@ TEST_F(CPUMonitorTestSuite, usageMpstatErrorTest)
   // Modify PATH temporarily
   modifyPath();
 
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -737,12 +632,7 @@ TEST_F(CPUMonitorTestSuite, usageMpstatExceptionTest)
   // Modify PATH temporarily
   modifyPath();
 
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;
@@ -769,6 +659,7 @@ TEST_F(CPUMonitorTestSuite, dummyCPUMonitorTest)
   rclcpp::NodeOptions options;
   std::unique_ptr<DummyCPUMonitor> monitor =
     std::make_unique<DummyCPUMonitor>("dummy_cpu_monitor", options);
+  monitor->forceTimerEvent();
   // Publish topic
   monitor->update();
 }
