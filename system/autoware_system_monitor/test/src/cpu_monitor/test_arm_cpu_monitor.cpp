@@ -17,19 +17,19 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/process.hpp>
 
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
 
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
 namespace {
@@ -186,27 +186,31 @@ protected:
     sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
       "/diagnostics", 1, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
 
+    // error_code is used to avoid exceptions.
+    std::error_code error_code;
     // Remove test file if exists
-    if (fs::exists(TEST_FILE)) {
-      fs::remove(TEST_FILE);
+    if (fs::exists(TEST_FILE, error_code)) {
+      fs::remove(TEST_FILE, error_code);
     }
     // mpstat_ is a symbolic link.
     // fs::exists() tests existence of the destination file, not the symbolic link.
-    if (fs::is_symlink(fs::symlink_status(mpstat_))) {
-      fs::remove(mpstat_);
+    if (fs::is_symlink(mpstat_, error_code)) {
+      fs::remove(mpstat_, error_code);
     }
   }
 
   void TearDown()
   {
+    // error_code is used to avoid exceptions.
+    std::error_code error_code;
     // Remove test file if exists
-    if (fs::exists(TEST_FILE)) {
-      fs::remove(TEST_FILE);
+    if (fs::exists(TEST_FILE, error_code)) {
+      fs::remove(TEST_FILE, error_code);
     }
     // mpstat_ is a symbolic link.
     // fs::exists() tests existence of the destination file, not the symbolic link.
-    if (fs::is_symlink(fs::symlink_status(mpstat_))) {
-      fs::remove(mpstat_);
+    if (fs::is_symlink(mpstat_, error_code)) {
+      fs::remove(mpstat_, error_code);
     }
     rclcpp::shutdown();
     restorePath()

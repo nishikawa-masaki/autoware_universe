@@ -67,7 +67,7 @@ protected:
 
 
   // The format of Thermal Throttling report depends on CPU model.
-  // So, Thermal Throttling report is implemented in derived class.
+  // Therefore, Thermal Throttling report is implemented in each derived class.
 
   // Intel CPU uses msr_reader to get thermal throttling data.
   int msr_reader_port_;  //!< @brief port number to connect to msr_reader
@@ -88,7 +88,7 @@ protected:
       summary_message.clear();
       error_key.clear();
       error_value.clear();
-      core_data.clear();
+      core_data.clear();  // Allocated heap memory is not released.
     }
   };
 

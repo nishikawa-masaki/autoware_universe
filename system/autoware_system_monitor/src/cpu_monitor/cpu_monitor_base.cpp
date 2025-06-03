@@ -31,7 +31,7 @@
 #include <fmt/format.h>
 
 #include <algorithm>
-#include <chrono>  // for 1s
+#include <chrono>
 #include <cstdio>
 #include <regex>
 #include <string>
@@ -126,7 +126,7 @@ void CPUMonitorBase::checkTemperature()
   std::vector<TemperatureData::CoreTemperature> temporary_core_data{};
   {
     // Start of critical section for protecting the class context
-    //  from race condition with unit tests.
+    //  from race conditions with the unit tests.
     std::lock_guard<std::mutex> lock(mutex_context_);
     // Lazy initialization for polymorphism.
     if (!is_temperature_file_names_initialized_.exchange(true)) {
@@ -196,7 +196,7 @@ void CPUMonitorBase::updateTemperature(diagnostic_updater::DiagnosticStatusWrapp
 
   for (const auto & entry : temperature_data_.core_data) {
     if (entry.status == DiagStatus::OK) {
-       stat.addf(entry.label, "%.1f DegC", entry.temperature);
+      stat.addf(entry.label, "%.1f DegC", entry.temperature);
     } else {
       stat.add(entry.error_key, entry.error_value);
     }
@@ -329,7 +329,7 @@ void CPUMonitorBase::checkUsage()
             level = CpuUsageToLevel(std::string("err"), usage);
           }
 
-          // Use local variable to avoid locking.
+          // Use local variable to avoid mutual exclusion.
           if (usage_average == true) {
             if (cpu_name == "all") {
               whole_level = level;
@@ -555,7 +555,7 @@ void CPUMonitorBase::checkThermalThrottling()
 }
 
 void CPUMonitorBase::updateThermalThrottling(
-  [[maybe_unused]] diagnostic_updater::DiagnosticStatusWrapper & stat)
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   // Call derived class implementation
   updateThermalThrottlingImpl(stat);
@@ -575,7 +575,7 @@ void CPUMonitorBase::checkFrequency()
   std::vector<FrequencyData::CoreFrequency> temporary_core_data{};
   {
     // Start of critical section for protecting the class context
-    //  from race condition with unit tests.
+    //  from race conditions with the unit tests.
     std::lock_guard<std::mutex> lock(mutex_context_);
     // Lazy initialization for polymorphism.
     if (!is_frequency_file_names_initialized_.exchange(true)) {
@@ -594,15 +594,16 @@ void CPUMonitorBase::checkFrequency()
       // Read scaling_cur_freq file
       const fs::path path(entry.path_);
       fs::ifstream ifs(path, std::ios::in);
-      if (ifs) {
-        std::string line;
-        if (std::getline(ifs, line)) {
-          temporary_core_data.emplace_back(
-            FrequencyData::CoreFrequency{entry.index_, DiagStatus::OK, std::stoi(line)});
-        }
+      if (!ifs) {
+        temporary_core_data.emplace_back(FrequencyData::CoreFrequency{entry.index_, DiagStatus::ERROR, 0});
+        continue;
+      }
+      std::string line;
+      if (std::getline(ifs, line)) {
+        temporary_core_data.emplace_back(
+          FrequencyData::CoreFrequency{entry.index_, DiagStatus::OK, std::stoi(line)});
       }
       ifs.close();
-      // TODO(masakinishikawa): Add error handling
     }
     // End of critical section
   }
@@ -629,7 +630,10 @@ void CPUMonitorBase::updateFrequency(diagnostic_updater::DiagnosticStatusWrapper
   }
 
   for (const auto & entry : frequency_data_.core_data) {
-    stat.addf(fmt::format("CPU {}: clock", entry.index), "%d MHz", (entry.frequency_khz / 1000));
+    if (entry.status == DiagStatus::OK) {
+      stat.addf(fmt::format("CPU {}: clock", entry.index), "%d MHz", (entry.frequency_khz / 1000));
+    }
+    // Errors are just ignored. The same behavior as the previous implementation.
   }
 
   stat.summary(frequency_data_.summary_status, frequency_data_.summary_message);

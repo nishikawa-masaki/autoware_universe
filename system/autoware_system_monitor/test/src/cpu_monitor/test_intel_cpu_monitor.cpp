@@ -19,19 +19,19 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_oarchive.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/process.hpp>
 
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 #include <pthread.h>
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
 namespace {
@@ -103,6 +103,21 @@ public:
     std::lock_guard<std::mutex> lock(mutex_context_);
     usage_error_ = usage_error;
   }
+
+  // Currently, there is no parameter to define the warning level of CPU Load Average.
+#if 0
+  void changeLoad1Warn(float load1_warn)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    load1_warn_ = load1_warn;
+  }
+
+  void changeLoad5Warn(float load5_warn)
+  {
+    std::lock_guard<std::mutex> lock(mutex_context_);
+    load5_warn_ = load5_warn;
+  }
+#endif  // 0
 
   void update()
   {
@@ -187,27 +202,31 @@ protected:
     sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
       "/diagnostics", 1, std::bind(&TestCPUMonitor::diagCallback, monitor_.get(), _1));
 
+    // error_code is used to avoid exceptions.
+    std::error_code error_code;
     // Remove test file if exists
-    if (fs::exists(TEST_FILE)) {
-      fs::remove(TEST_FILE);
+    if (fs::exists(TEST_FILE, error_code)) {
+      fs::remove(TEST_FILE, error_code);
     }
     // mpstat_ is a symbolic link.
     // fs::exists() tests existence of the destination file, not the symbolic link.
-    if (fs::is_symlink(fs::symlink_status(mpstat_))) {
-      fs::remove(mpstat_);
+    if (fs::is_symlink(mpstat_, error_code)) {
+      fs::remove(mpstat_, error_code);
     }
   }
 
   void TearDown()
   {
+    // error_code is used to avoid exceptions.
+    std::error_code error_code;
     // Remove test file if exists
-    if (fs::exists(TEST_FILE)) {
-      fs::remove(TEST_FILE);
+    if (fs::exists(TEST_FILE, error_code)) {
+      fs::remove(TEST_FILE, error_code);
     }
     // mpstat_ is a symbolic link.
     // fs::exists() tests existence of the destination file, not the symbolic link.
-    if (fs::is_symlink(fs::symlink_status(mpstat_))) {
-      fs::remove(mpstat_);
+    if (fs::is_symlink(mpstat_, error_code)) {
+      fs::remove(mpstat_, error_code);
     }
     rclcpp::shutdown();
     restorePath();
@@ -625,6 +644,7 @@ TEST_F(CPUMonitorTestSuite, usageMpstatNotFoundTest)
     "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat");
 }
 
+// Currently, there is no parameter to define the warning level of CPU Load Average.
 TEST_F(CPUMonitorTestSuite, load1WarnTest)
 {
   // Verify normal behavior
@@ -639,6 +659,7 @@ TEST_F(CPUMonitorTestSuite, load1WarnTest)
   }
 }
 
+// Currently, there is no parameter to define the warning level of CPU Load Average.
 TEST_F(CPUMonitorTestSuite, load5WarnTest)
 {
   // Verify normal behavior
@@ -661,16 +682,14 @@ TEST_F(CPUMonitorTestSuite, throttlingTest)
   pthread_create(&th, nullptr, msr_reader::msr_reader, &mode);
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
-  // rclcpp::WallRate(1).sleep();
 
   updatePublishSubscribe();
 
+  pthread_join(th, NULL);
   // Verify
   DiagStatus status;
   ASSERT_TRUE(monitor_->findDiagStatus("CPU Thermal Throttling", status));
   ASSERT_EQ(status.level, DiagStatus::OK);
-
-  pthread_join(th, NULL);
 }
 
 TEST_F(CPUMonitorTestSuite, throttlingThrottlingTest)
@@ -683,12 +702,12 @@ TEST_F(CPUMonitorTestSuite, throttlingThrottlingTest)
 
   updatePublishSubscribe();
 
+  pthread_join(th, NULL);
   // Verify
   DiagStatus status;
   ASSERT_TRUE(monitor_->findDiagStatus("CPU Thermal Throttling", status));
   ASSERT_EQ(status.level, DiagStatus::ERROR);
   ASSERT_STREQ(status.message.c_str(), "throttling");
-  pthread_join(th, NULL);
 }
 
 TEST_F(CPUMonitorTestSuite, throttlingReturnsErrorTest)
@@ -701,6 +720,7 @@ TEST_F(CPUMonitorTestSuite, throttlingReturnsErrorTest)
 
   updatePublishSubscribe();
 
+  pthread_join(th, NULL);
   // Verify
   DiagStatus status;
   std::string value;
@@ -709,8 +729,6 @@ TEST_F(CPUMonitorTestSuite, throttlingReturnsErrorTest)
   ASSERT_STREQ(status.message.c_str(), "msr_reader error");
   ASSERT_TRUE(findValue(status, "msr_reader", value));
   ASSERT_STREQ(value.c_str(), strerror(EACCES));
-
-  pthread_join(th, NULL);
 }
 
 TEST_F(CPUMonitorTestSuite, throttlingRecvTimeoutTest)
@@ -721,18 +739,11 @@ TEST_F(CPUMonitorTestSuite, throttlingRecvTimeoutTest)
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
 
-  monitor_->forceTimerEvent();
-  // Publish topic
-  monitor_->update();
+  updatePublishSubscribe();
 
   // Recv timeout occurs, thread is no longer needed
   msr_reader::stop_msr_reader();
   pthread_join(th, NULL);
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-
   // Verify
   DiagStatus status;
   std::string value;
@@ -751,16 +762,9 @@ TEST_F(CPUMonitorTestSuite, throttlingRecvNoDataTest)
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
 
-  monitor_->forceTimerEvent();
-  // Publish topic
-  monitor_->update();
+  updatePublishSubscribe();
 
   pthread_join(th, NULL);
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-
   // Verify
   DiagStatus status;
   std::string value;
@@ -779,16 +783,9 @@ TEST_F(CPUMonitorTestSuite, throttlingFormatErrorTest)
   // Wait for thread started
   rclcpp::WallRate(10).sleep();
 
-  monitor_->forceTimerEvent();
-  // Publish topic
-  monitor_->update();
+  updatePublishSubscribe();
 
   pthread_join(th, NULL);
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
-
   // Verify
   DiagStatus status;
   std::string value;
@@ -801,13 +798,7 @@ TEST_F(CPUMonitorTestSuite, throttlingFormatErrorTest)
 
 TEST_F(CPUMonitorTestSuite, throttlingConnectErrorTest)
 {
-  monitor_->forceTimerEvent();
-  // Publish topic
-  monitor_->update();
-
-  // Give time to publish
-  rclcpp::WallRate(2).sleep();
-  rclcpp::spin_some(monitor_->get_node_base_interface());
+  updatePublishSubscribe();
 
   // Verify
   DiagStatus status;

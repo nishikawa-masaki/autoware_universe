@@ -145,7 +145,7 @@ struct FrequencyData
     elapsed_ms = 0.0f;
     summary_status = 0;
     summary_message.clear();
-    core_data.clear();
+    core_data.clear();  // Allocated heap memory is not released.
   }
 };
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_

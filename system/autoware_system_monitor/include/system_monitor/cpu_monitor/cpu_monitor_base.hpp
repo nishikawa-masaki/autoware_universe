@@ -160,7 +160,7 @@ protected:
 
   std::mutex mutex_context_;  //!< @brief mutex for protecting the class context
   // Unit tests modify these variables.
-  // So we need to protect them with mutex_context_.
+  // Therefore, they should be protected with mutex_context_.
   // NOTE:
   //   Though current implementation of unit tests disables the timer callback,
   //   the context variables still should be protected by mutex_context_.
@@ -173,7 +173,8 @@ protected:
   std::vector<int>
     usage_error_check_count_;  //!< @brief CPU list for usage over error check counter
   bool mpstat_exists_;         //!< @brief Check if mpstat command exists
-  // Though parameters are read-only after initialization, unit tests modify them.
+  // Though node parameters are read-only after initialization, unit tests modify them.
+  // Therefore, they should be protected with mutex_context_, too.
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error
   int usage_warn_count_;   //!< @brief continuous count over usage_warn_ to generate warning
@@ -221,8 +222,9 @@ private:
    */
   virtual void getFrequencyFileNames();
 
+  // Lazy initialization.
   // File name lists are initialized at the first call of onTimer()
-  // so that virtual functions can be called. Lazy initialization.
+  // so that virtual functions can be called.
   std::atomic<bool> is_temperature_file_names_initialized_;
   std::atomic<bool> is_frequency_file_names_initialized_;
 };
