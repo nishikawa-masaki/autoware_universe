@@ -34,7 +34,7 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 }
 
 CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
-  : CPUMonitorBase(node_name, options)
+: CPUMonitorBase(node_name, options)
 {
 }
 
@@ -90,7 +90,8 @@ void CPUMonitor::checkThermalThrottling()
   thermal_throttling_data_.elapsed_ms = elapsed_ms;
 }
 
-void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
+void CPUMonitor::updateThermalThrottlingImpl(
+  diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
 {
   std::lock_guard<std::mutex> lock(mutex_snapshot_);
 
@@ -102,7 +103,7 @@ void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatu
 
   stat.add("status", thermal_throttling_data_.status);
   stat.summary(thermal_throttling_data_.summary_status, thermal_throttling_data_.summary_message);
-  stat.addf("execution time", "%f ms", thermal_throttling_data_.elapsed_ms);  
+  stat.addf("execution time", "%f ms", thermal_throttling_data_.elapsed_ms);
 }
 
 // This function is called from a locked context in the timer callback.

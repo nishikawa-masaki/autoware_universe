@@ -65,7 +65,6 @@ protected:
    */
   void modprobeMSR();
 
-
   // The format of Thermal Throttling report depends on CPU model.
   // Therefore, Thermal Throttling report is implemented in each derived class.
 

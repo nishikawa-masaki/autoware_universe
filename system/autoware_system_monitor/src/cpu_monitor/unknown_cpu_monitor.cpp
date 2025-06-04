@@ -26,7 +26,7 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 }
 
 CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
-  : CPUMonitorBase(node_name, options)
+: CPUMonitorBase(node_name, options)
 {
 }
 

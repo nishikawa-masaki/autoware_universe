@@ -84,7 +84,8 @@ protected:
   /**
    * @brief check CPU thermal throttling
    * @note Data format of ThermalThrottling differs among platforms.
-   * So both of checkThermalThrottling() and updateThermalThrottlingImpl() should be implemented in each derived class.
+   * So both of checkThermalThrottling() and updateThermalThrottlingImpl() should be implemented in
+   * each derived class.
    */
   virtual void checkThermalThrottling();
 
@@ -139,7 +140,8 @@ protected:
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
    * @note Data format of ThermalThrottling differs among platforms.
-   * So both of checkThermalThrottling() and updateThermalThrottlingImpl() should be implemented in the derived class.
+   * So both of checkThermalThrottling() and updateThermalThrottlingImpl() should be implemented in
+   * the derived class.
    */
   virtual void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
@@ -168,8 +170,7 @@ protected:
   int num_cores_;                                 //!< @brief number of cores
   std::vector<CpuTemperatureInfo> temperatures_;  //!< @brief CPU list for temperature
   std::vector<CpuFrequencyInfo> frequencies_;     //!< @brief CPU list for frequency
-  std::vector<int>
-    usage_warn_check_count_;   //!< @brief CPU list for usage over warn check counter
+  std::vector<int> usage_warn_check_count_;  //!< @brief CPU list for usage over warn check counter
   std::vector<int>
     usage_error_check_count_;  //!< @brief CPU list for usage over error check counter
   bool mpstat_exists_;         //!< @brief Check if mpstat command exists
