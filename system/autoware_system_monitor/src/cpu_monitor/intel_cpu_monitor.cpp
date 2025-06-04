@@ -240,13 +240,14 @@ void CPUMonitor::getTemperatureFileNames()
     std::string label = boost::algorithm::replace_all_copy(temperature_input, "input", "label");
     const fs::path label_path(label);
     fs::ifstream ifs(label_path, std::ios::in);
+    // If the label file exists, read the label from the file.
     if (ifs) {
       std::string line;
       if (std::getline(ifs, line)) {
         temperature.label_ = line;
       }
+      ifs.close();
     }
-    ifs.close();
     temperatures_.push_back(temperature);
   }
 
