@@ -167,8 +167,8 @@ void CPUMonitorBase::checkTemperature()
         }
       }
       temperature /= 1000;
-      temporary_core_data.emplace_back(
-        TemperatureData::CoreTemperature{entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
+      temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
+        entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
     }
     // End of critical section
   }
@@ -556,8 +556,7 @@ void CPUMonitorBase::checkThermalThrottling()
   RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::checkThermalThrottling not implemented.");
 }
 
-void CPUMonitorBase::updateThermalThrottling(
-  diagnostic_updater::DiagnosticStatusWrapper & stat)
+void CPUMonitorBase::updateThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   // Call derived class implementation
   updateThermalThrottlingImpl(stat);
@@ -598,7 +597,8 @@ void CPUMonitorBase::checkFrequency()
       const fs::path path(entry.path_);
       fs::ifstream ifs(path, std::ios::in);
       if (!ifs) {
-        temporary_core_data.emplace_back(FrequencyData::CoreFrequency{entry.index_, DiagStatus::ERROR, 0});
+        temporary_core_data.emplace_back(
+          FrequencyData::CoreFrequency{entry.index_, DiagStatus::ERROR, 0});
         continue;
       }
       std::string line;

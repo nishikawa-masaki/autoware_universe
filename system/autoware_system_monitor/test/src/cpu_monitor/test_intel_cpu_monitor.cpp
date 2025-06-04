@@ -34,11 +34,12 @@
 namespace fs = std::filesystem;
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
-namespace {
-  constexpr const char * TEST_FILE = "test";
-  constexpr const char * DOCKER_ENV = "/.dockerenv";
+namespace
+{
+constexpr const char * TEST_FILE = "test";
+constexpr const char * DOCKER_ENV = "/.dockerenv";
 
-  char ** argv_;
+char ** argv_;
 }  // namespace
 
 class TestCPUMonitor : public CPUMonitor
@@ -69,7 +70,8 @@ public:
     temperatures_.clear();
   }
 
-  bool isTempNamesEmpty() {
+  bool isTempNamesEmpty()
+  {
     std::lock_guard<std::mutex> lock_context(mutex_context_);
     return temperatures_.empty();
   }
@@ -119,20 +121,11 @@ public:
   }
 #endif  // 0
 
-  void update()
-  {
-    updater_.force_update();
-  }
+  void update() { updater_.force_update(); }
 
-  void forceTimerEvent()
-  {
-    this->onTimer();
-  }
+  void forceTimerEvent() { this->onTimer(); }
 
-  void disableTimer()
-  {
-    timer_->cancel();
-  }
+  void disableTimer() { timer_->cancel(); }
 
   const std::string removePrefix(const std::string & name)
   {
@@ -268,138 +261,138 @@ protected:
     rclcpp::WallRate(2).sleep();
     rclcpp::spin_some(monitor_->get_node_base_interface());
   }
-
 };
 
-namespace msr_reader {
-  enum ThreadTestMode {
-    Normal = 0,
-    Throttling,
-    ReturnsError,
-    RecvTimeout,
-    RecvNoData,
-    FormatError,
-  };
+namespace msr_reader
+{
+enum ThreadTestMode {
+  Normal = 0,
+  Throttling,
+  ReturnsError,
+  RecvTimeout,
+  RecvNoData,
+  FormatError,
+};
 
-  bool stop_thread = false;
-  pthread_mutex_t mutex;
+bool stop_thread = false;
+pthread_mutex_t mutex;
 
-  void * msr_reader(void * args)
-  {
-    stop_thread = false;
-    ThreadTestMode * mode = reinterpret_cast<ThreadTestMode *>(args);
+void * msr_reader(void * args)
+{
+  stop_thread = false;
+  ThreadTestMode * mode = reinterpret_cast<ThreadTestMode *>(args);
 
-    // Create a new socket
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-      return nullptr;
-    }
+  // Create a new socket
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
+    return nullptr;
+  }
 
-    // Allow address reuse
-    int ret = 0;
-    int opt = 1;
-    ret = setsockopt(
-      sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), (socklen_t)sizeof(opt));
-    if (ret < 0) {
-      close(sock);
-      return nullptr;
-    }
-
-    // Give the socket FD the local address ADDR
-    sockaddr_in addr;
-    memset(&addr, 0, sizeof(sockaddr_in));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(7634);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    // cppcheck-suppress cstyleCast
-    ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
-    if (ret < 0) {
-      close(sock);
-      return nullptr;
-    }
-
-    // Prepare to accept connections on socket FD
-    ret = listen(sock, 5);
-    if (ret < 0) {
-      close(sock);
-      return nullptr;
-    }
-
-    sockaddr_in client;
-    socklen_t len = sizeof(client);
-
-    // Await a connection on socket FD
-    int new_sock = accept(sock, reinterpret_cast<sockaddr *>(&client), &len);
-    if (new_sock < 0) {
-      close(sock);
-      return nullptr;
-    }
-
-    ret = 0;
-    std::ostringstream oss;
-    boost::archive::text_oarchive oa(oss);
-    MSRInfo msr{};
-
-    switch (*mode) {
-      case Normal:
-        msr.error_code_ = 0;
-        msr.pkg_thermal_status_.push_back(false);
-        oa << msr;
-        ret = write(new_sock, oss.str().c_str(), oss.str().length());
-        break;
-
-      case Throttling:
-        msr.error_code_ = 0;
-        msr.pkg_thermal_status_.push_back(true);
-        oa << msr;
-        ret = write(new_sock, oss.str().c_str(), oss.str().length());
-        break;
-
-      case ReturnsError:
-        msr.error_code_ = EACCES;
-        oa << msr;
-        ret = write(new_sock, oss.str().c_str(), oss.str().length());
-        break;
-
-      case RecvTimeout:
-        // Wait for recv timeout
-        while (true) {
-          pthread_mutex_lock(&mutex);
-          if (stop_thread) {
-            pthread_mutex_unlock(&mutex);
-            break;
-          }
-          pthread_mutex_unlock(&mutex);
-          sleep(1);
-        }
-        break;
-
-      case RecvNoData:
-        // Send nothing, close socket immediately
-        break;
-
-      case FormatError:
-        // Send wrong data
-        oa << "test";
-        ret = write(new_sock, oss.str().c_str(), oss.str().length());
-        break;
-
-      default:
-        break;
-    }
-
-    // Close the file descriptor FD
-    close(new_sock);
+  // Allow address reuse
+  int ret = 0;
+  int opt = 1;
+  ret = setsockopt(
+    sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), (socklen_t)sizeof(opt));
+  if (ret < 0) {
     close(sock);
     return nullptr;
   }
 
-  void stop_msr_reader()
-  {
-    pthread_mutex_lock(&mutex);
-    stop_thread = true;
-    pthread_mutex_unlock(&mutex);
+  // Give the socket FD the local address ADDR
+  sockaddr_in addr;
+  memset(&addr, 0, sizeof(sockaddr_in));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(7634);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  // cppcheck-suppress cstyleCast
+  ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
+  if (ret < 0) {
+    close(sock);
+    return nullptr;
   }
+
+  // Prepare to accept connections on socket FD
+  ret = listen(sock, 5);
+  if (ret < 0) {
+    close(sock);
+    return nullptr;
+  }
+
+  sockaddr_in client;
+  socklen_t len = sizeof(client);
+
+  // Await a connection on socket FD
+  int new_sock = accept(sock, reinterpret_cast<sockaddr *>(&client), &len);
+  if (new_sock < 0) {
+    close(sock);
+    return nullptr;
+  }
+
+  ret = 0;
+  std::ostringstream oss;
+  boost::archive::text_oarchive oa(oss);
+  MSRInfo msr{};
+
+  switch (*mode) {
+    case Normal:
+      msr.error_code_ = 0;
+      msr.pkg_thermal_status_.push_back(false);
+      oa << msr;
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
+      break;
+
+    case Throttling:
+      msr.error_code_ = 0;
+      msr.pkg_thermal_status_.push_back(true);
+      oa << msr;
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
+      break;
+
+    case ReturnsError:
+      msr.error_code_ = EACCES;
+      oa << msr;
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
+      break;
+
+    case RecvTimeout:
+      // Wait for recv timeout
+      while (true) {
+        pthread_mutex_lock(&mutex);
+        if (stop_thread) {
+          pthread_mutex_unlock(&mutex);
+          break;
+        }
+        pthread_mutex_unlock(&mutex);
+        sleep(1);
+      }
+      break;
+
+    case RecvNoData:
+      // Send nothing, close socket immediately
+      break;
+
+    case FormatError:
+      // Send wrong data
+      oa << "test";
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
+      break;
+
+    default:
+      break;
+  }
+
+  // Close the file descriptor FD
+  close(new_sock);
+  close(sock);
+  return nullptr;
+}
+
+void stop_msr_reader()
+{
+  pthread_mutex_lock(&mutex);
+  stop_thread = true;
+  pthread_mutex_unlock(&mutex);
+}
 }  // namespace msr_reader
 
 TEST_F(CPUMonitorTestSuite, tempWarnTest)
@@ -467,7 +460,6 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Temperature", status));
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
-
 
   // Add test file to list
   monitor_->addTempName("CPU Dummy", TEST_FILE);
@@ -883,7 +875,9 @@ class DummyCPUMonitor : public CPUMonitorBase
 
 public:
   DummyCPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
-  : CPUMonitorBase(node_name, options) {}
+  : CPUMonitorBase(node_name, options)
+  {
+  }
   void update() { updater_.force_update(); }
 };
 

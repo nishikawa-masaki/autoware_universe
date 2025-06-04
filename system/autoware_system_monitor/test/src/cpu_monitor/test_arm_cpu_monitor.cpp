@@ -28,13 +28,13 @@
 #include <string>
 #include <vector>
 
-
 namespace fs = std::filesystem;
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
-namespace {
-  constexpr const char * TEST_FILE = "test";
-  char ** argv_;
+namespace
+{
+constexpr const char * TEST_FILE = "test";
+char ** argv_;
 }  // namespace
 
 class TestCPUMonitor : public CPUMonitor
@@ -107,20 +107,11 @@ public:
     load5_warn_ = load5_warn;
   }
 
-  void update()
-  {
-    updater_.force_update();
-  }
+  void update() { updater_.force_update(); }
 
-  void forceTimerEvent()
-  {
-    this->onTimer();
-  }
+  void forceTimerEvent() { this->onTimer(); }
 
-  void disableTimer()
-  {
-    timer_->cancel();
-  }
+  void disableTimer() { timer_->cancel(); }
 
   const std::string removePrefix(const std::string & name)
   {
@@ -252,7 +243,6 @@ protected:
     rclcpp::WallRate(2).sleep();
     rclcpp::spin_some(monitor_->get_node_base_interface());
   }
-
 };
 
 TEST_F(CPUMonitorTestSuite, tempWarnTest)
@@ -654,7 +644,9 @@ class DummyCPUMonitor : public CPUMonitorBase
 
 public:
   DummyCPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
-  : CPUMonitorBase(node_name, options) {}
+  : CPUMonitorBase(node_name, options)
+  {
+  }
   void update() { updater_.force_update(); }
 };
 

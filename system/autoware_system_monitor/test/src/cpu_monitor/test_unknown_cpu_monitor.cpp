@@ -39,20 +39,11 @@ public:
     array_ = *diag_msg;
   }
 
-  void update()
-  {
-    updater_.force_update();
-  }
+  void update() { updater_.force_update(); }
 
-  void forceTimerEvent()
-  {
-    this->onTimer();
-  }
+  void forceTimerEvent() { this->onTimer(); }
 
-  void disableTimer()
-  {
-    timer_->cancel();
-  }
+  void disableTimer() { timer_->cancel(); }
 
 private:
   std::mutex mutex_diagnostic_;  // Protects the diagnostic array.
