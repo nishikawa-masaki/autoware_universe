@@ -50,61 +50,61 @@ public:
 
   void diagCallback(const diagnostic_msgs::msg::DiagnosticArray::ConstSharedPtr diag_msg)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock_diagnostic(mutex_diagnostic_);
     array_ = *diag_msg;
   }
 
   void addTempName(const std::string & label, const std::string & path)
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     temperatures_.emplace_back(label, path);
   }
 
   void clearTempNames()
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     temperatures_.clear();
   }
 
   void addFreqName(int index, const std::string & path)
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     frequencies_.emplace_back(index, path);
   }
 
   void clearFreqNames()
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     frequencies_.clear();
   }
 
   void setMpstatExists(bool mpstat_exists)
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     mpstat_exists_ = mpstat_exists;
   }
 
   void changeUsageWarn(float usage_warn)
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     usage_warn_ = usage_warn;
   }
 
   void changeUsageError(float usage_error)
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     usage_error_ = usage_error;
   }
 
   void changeLoad1Warn(float load1_warn)
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     load1_warn_ = load1_warn;
   }
-  
+
   void changeLoad5Warn(float load5_warn)
   {
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     load5_warn_ = load5_warn;
   }
 
@@ -130,7 +130,7 @@ public:
 
   bool findDiagStatus(const std::string & name, DiagStatus & status)  // NOLINT
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock_diagnostic(mutex_diagnostic_);
     for (size_t i = 0; i < array_.status.size(); ++i) {
       if (removePrefix(array_.status[i].name) == name) {
         status = array_.status[i];
@@ -141,7 +141,7 @@ public:
   }
 
 private:
-  std::mutex mutex_;  // Protects the diagnostic array.
+  std::mutex mutex_diagnostic_;  // Protects the diagnostic array.
   diagnostic_msgs::msg::DiagnosticArray array_;
 
   const std::string prefix_ = std::string(this->get_name()) + ": ";

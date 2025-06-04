@@ -35,7 +35,7 @@ public:
 
   void diagCallback(const diagnostic_msgs::msg::DiagnosticArray::ConstSharedPtr diag_msg)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock_diagnostic(mutex_diagnostic_);
     array_ = *diag_msg;
   }
 
@@ -55,7 +55,7 @@ public:
   }
 
 private:
-  std::mutex mutex_;  // Protects the diagnostic array.
+  std::mutex mutex_diagnostic_;  // Protects the diagnostic array.
   diagnostic_msgs::msg::DiagnosticArray array_;
 };
 

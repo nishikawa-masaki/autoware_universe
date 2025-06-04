@@ -127,13 +127,14 @@ void CPUMonitorBase::checkTemperature()
   {
     // Start of critical section for protecting the class context
     //  from race conditions with the unit tests.
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     // Lazy initialization for polymorphism.
     if (!is_temperature_file_names_initialized_.exchange(true)) {
       getTemperatureFileNames();
     }
     if (temperatures_.empty()) {
-      std::lock_guard<std::mutex> lock(mutex_snapshot_);
+      // Note that the mutex_context_ is locked.
+      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
       temperature_data_.clear();
       temperature_data_.summary_status = DiagStatus::ERROR;
       temperature_data_.summary_message = "temperature files not found";
@@ -172,7 +173,7 @@ void CPUMonitorBase::checkTemperature()
     // End of critical section
   }
 
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   temperature_data_.clear();
   temperature_data_.core_data = temporary_core_data;
   if (!error_str.empty()) {
@@ -192,7 +193,7 @@ void CPUMonitorBase::checkTemperature()
 
 void CPUMonitorBase::updateTemperature(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   for (const auto & entry : temperature_data_.core_data) {
     if (entry.status == DiagStatus::OK) {
@@ -213,10 +214,11 @@ void CPUMonitorBase::checkUsage()
 
   bool usage_average = false;
   {  // Start of critical section
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     usage_average = usage_average_;  // Copy to local variable for later use.
     if (!mpstat_exists_) {
-      std::lock_guard<std::mutex> lock(mutex_snapshot_);
+      // Note that the mutex_context_ is locked.
+      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
       usage_data_.clear();
       usage_data_.summary_status = DiagStatus::ERROR;
       usage_data_.summary_message = "mpstat error";
@@ -234,7 +236,7 @@ void CPUMonitorBase::checkUsage()
   // So create file descriptor with O_CLOEXEC and pass it to boost::process.
   int out_fd[2];
   if (pipe2(out_fd, O_CLOEXEC) != 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     usage_data_.clear();
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "pipe2 error";
@@ -248,7 +250,7 @@ void CPUMonitorBase::checkUsage()
 
   int err_fd[2];
   if (pipe2(err_fd, O_CLOEXEC) != 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     usage_data_.clear();
     usage_data_.summary_status = DiagStatus::ERROR;
     usage_data_.summary_message = "pipe2 error";
@@ -273,7 +275,7 @@ void CPUMonitorBase::checkUsage()
     if (c.exit_code() != 0) {
       std::ostringstream os;
       is_err >> os.rdbuf();
-      std::lock_guard<std::mutex> lock(mutex_snapshot_);
+      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
       usage_data_.clear();
       usage_data_.summary_status = DiagStatus::ERROR;
       usage_data_.summary_message = "mpstat error";
@@ -345,7 +347,7 @@ void CPUMonitorBase::checkUsage()
     }
   } catch (const std::exception & e) {
     {
-      std::lock_guard<std::mutex> lock(mutex_snapshot_);
+      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
       usage_data_.clear();
       usage_data_.summary_status = DiagStatus::ERROR;
       usage_data_.summary_message = "mpstat exception";
@@ -355,14 +357,14 @@ void CPUMonitorBase::checkUsage()
       usage_data_.core_data.clear();
     }
     {
-      std::lock_guard<std::mutex> lock(mutex_context_);
+      std::lock_guard<std::mutex> lock_context(mutex_context_);
       std::fill(usage_warn_check_count_.begin(), usage_warn_check_count_.end(), 0);
       std::fill(usage_error_check_count_.begin(), usage_error_check_count_.end(), 0);
     }
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   usage_data_.clear();
   usage_data_.core_data = temporary_core_data;
   usage_data_.summary_status = whole_level;
@@ -378,7 +380,7 @@ void CPUMonitorBase::checkUsage()
 
 void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   tier4_external_api_msgs::msg::CpuUsage cpu_usage;
   using CpuStatus = tier4_external_api_msgs::msg::CpuStatus;
@@ -424,7 +426,7 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
 
 int CPUMonitorBase::CpuUsageToLevel(const std::string & cpu_name, float usage)
 {
-  std::lock_guard<std::mutex> lock(mutex_context_);
+  std::lock_guard<std::mutex> lock_context(mutex_context_);
   // cpu name to counter index
   int idx;
   try {
@@ -477,7 +479,7 @@ void CPUMonitorBase::checkLoad()
   std::ifstream ifs("/proc/loadavg", std::ios::in);
 
   if (!ifs) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
@@ -490,7 +492,7 @@ void CPUMonitorBase::checkLoad()
   std::string line;
 
   if (!std::getline(ifs, line)) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
@@ -503,7 +505,7 @@ void CPUMonitorBase::checkLoad()
   if (
     sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) !=
     3) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
@@ -517,7 +519,7 @@ void CPUMonitorBase::checkLoad()
   load_average[1] /= num_cores_;
   load_average[2] /= num_cores_;
 
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   load_data_.clear();
   load_data_.summary_status = DiagStatus::OK;
   load_data_.summary_message = "OK";
@@ -533,7 +535,7 @@ void CPUMonitorBase::checkLoad()
 
 void CPUMonitorBase::updateLoad(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   if (load_data_.summary_status != DiagStatus::OK) {
     stat.summary(load_data_.summary_status, load_data_.summary_message);
@@ -576,13 +578,14 @@ void CPUMonitorBase::checkFrequency()
   {
     // Start of critical section for protecting the class context
     //  from race conditions with the unit tests.
-    std::lock_guard<std::mutex> lock(mutex_context_);
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
     // Lazy initialization for polymorphism.
     if (!is_frequency_file_names_initialized_.exchange(true)) {
       getFrequencyFileNames();
     }
     if (frequencies_.empty()) {
-      std::lock_guard<std::mutex> lock(mutex_snapshot_);
+      // Note that the mutex_context_ is locked.
+      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
       frequency_data_.clear();
       frequency_data_.summary_status = DiagStatus::ERROR;
       frequency_data_.summary_message = "frequency files not found";
@@ -608,7 +611,7 @@ void CPUMonitorBase::checkFrequency()
     // End of critical section
   }
 
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   frequency_data_.clear();
   frequency_data_.core_data = temporary_core_data;
   frequency_data_.summary_status = DiagStatus::OK;
@@ -622,7 +625,7 @@ void CPUMonitorBase::checkFrequency()
 
 void CPUMonitorBase::updateFrequency(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   if (frequency_data_.summary_status != DiagStatus::OK) {
     stat.summary(frequency_data_.summary_status, frequency_data_.summary_message);

@@ -56,7 +56,7 @@ void CPUMonitor::checkThermalThrottling()
   // Create a new socket
   int sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock < 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "socket error";
@@ -71,7 +71,7 @@ void CPUMonitor::checkThermalThrottling()
   tv.tv_usec = 0;
   int ret = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   if (ret < 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "setsockopt error";
@@ -90,7 +90,7 @@ void CPUMonitor::checkThermalThrottling()
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "connect error";
@@ -104,7 +104,7 @@ void CPUMonitor::checkThermalThrottling()
   char buf[1024] = "";
   ret = recv(sock, buf, sizeof(buf) - 1, 0);
   if (ret < 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "recv error";
@@ -115,7 +115,7 @@ void CPUMonitor::checkThermalThrottling()
   }
   // No data received
   if (ret == 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "recv error";
@@ -128,7 +128,7 @@ void CPUMonitor::checkThermalThrottling()
   // Close the file descriptor FD
   ret = close(sock);
   if (ret < 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "close error";
@@ -145,7 +145,7 @@ void CPUMonitor::checkThermalThrottling()
     boost::archive::text_iarchive oa(iss);
     oa >> info;
   } catch (const std::exception & e) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "recv error";
@@ -156,7 +156,7 @@ void CPUMonitor::checkThermalThrottling()
 
   // msr_reader returns an error
   if (info.error_code_ != 0) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "msr_reader error";
@@ -168,7 +168,7 @@ void CPUMonitor::checkThermalThrottling()
   int whole_level = DiagStatus::OK;
   int index = 0;
 
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   thermal_throttling_data_.clear();
   for (auto itr = info.pkg_thermal_status_.begin(); itr != info.pkg_thermal_status_.end();
        ++itr, ++index) {
@@ -194,7 +194,7 @@ void CPUMonitor::checkThermalThrottling()
 
 void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   if (!thermal_throttling_data_.error_key.empty()) {
     stat.summary(thermal_throttling_data_.summary_status, thermal_throttling_data_.summary_message);

@@ -49,7 +49,7 @@ void CPUMonitor::checkThermalThrottling()
   const fs::path path("/sys/devices/platform/soc/soc:firmware/get_throttled");
   fs::ifstream ifs(path, std::ios::in);
   if (!ifs) {
-    std::lock_guard<std::mutex> lock(mutex_snapshot_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     thermal_throttling_data_.clear();
     thermal_throttling_data_.summary_status = DiagStatus::ERROR;
     thermal_throttling_data_.summary_message = "file open error";
@@ -76,7 +76,7 @@ void CPUMonitor::checkThermalThrottling()
     status.emplace_back("All clear");
   }
 
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   thermal_throttling_data_.clear();
 
   thermal_throttling_data_.status = boost::algorithm::join(status, ", ");
@@ -92,7 +92,7 @@ void CPUMonitor::checkThermalThrottling()
 
 void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
 {
-  std::lock_guard<std::mutex> lock(mutex_snapshot_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   if (!thermal_throttling_data_.error_key.empty()) {
     stat.summary(thermal_throttling_data_.summary_status, thermal_throttling_data_.summary_message);
