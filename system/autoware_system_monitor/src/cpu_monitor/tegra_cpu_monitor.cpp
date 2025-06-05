@@ -32,17 +32,13 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 }
 
 CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
-  : CPUMonitorBase(node_name, options)
+: CPUMonitorBase(node_name, options)
 {
   // There is no event record for thermal throttling.
-  // Need to manually monitor temperature to figure out if thermal limits crossed or not.
   updater_.removeByName("CPU Thermal Throttling");
 }
 
-void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
-{
-}
-
+// This function is called from a locked context in the timer callback.
 void CPUMonitor::getTemperatureFileNames()
 {
   // Jetson TX1 TX2 Nano: thermal_zone1, Xavier: thermal_zone0

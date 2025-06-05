@@ -29,6 +29,7 @@
 #include <tier4_external_api_msgs/msg/cpu_status.hpp>
 #include <tier4_external_api_msgs/msg/cpu_usage.hpp>
 
+#include <atomic>
 #include <climits>
 #include <map>
 #include <mutex>
@@ -54,23 +55,13 @@ protected:
   CPUMonitorBase(const std::string & node_name, const rclcpp::NodeOptions & options);
 
   /**
-   * @brief get names for core temperature files
-   */
-  virtual void getTemperatureFileNames();
-
-  /**
-   * @brief get names for cpu frequency files
-   */
-  virtual void getFrequencyFileNames();
-
-  /**
    * @brief check CPU temperature
    */
   virtual void checkTemperature();
 
   /**
    * @brief convert Cpu Usage To diagnostic Level
-   * @param [cpu_name] cpu name (all, 0, 1, etc.)
+   * @param [cpu_name] cpu name (all, 0, 1, etc. : compatible with mpstat)
    * @param [usage] cpu usage value
    * @return DiagStatus::OK or WARN or ERROR
    */
@@ -90,6 +81,14 @@ protected:
    * @brief check CPU frequency
    */
   virtual void checkFrequency();
+
+  /**
+   * @brief check CPU thermal throttling
+   * @note Data format of ThermalThrottling differs among platforms.
+   * So both of checkThermalThrottling() and updateThermalThrottlingImpl() should be implemented in
+   * each derived class.
+   */
+  virtual void checkThermalThrottling();
 
   /**
    * @brief update CPU temperature
@@ -128,14 +127,24 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**
-   * @brief check CPU thermal throttling
+   * @brief update CPU thermal throttling
+   * @param [out] stat diagnostic message passed directly to diagnostic publish calls
+   * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
+   * to pass diagnostic message updated in this function to diagnostic publish calls.
+   */
+  void updateThermalThrottling(
+    diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
+
+  /**
+   * @brief update CPU thermal throttling implementation
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    * @note NOLINT syntax is needed since diagnostic_updater asks for a non-const reference
    * to pass diagnostic message updated in this function to diagnostic publish calls.
    * @note Data format of ThermalThrottling differs among platforms.
-   * So checking of status and updating of diagnostic are executed simultaneously.
+   * So both of checkThermalThrottling() and updateThermalThrottlingImpl() should be implemented in
+   * the derived class.
    */
-  virtual void checkThermalThrottling(
+  virtual void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat);  // NOLINT(runtime/references)
 
   /**
@@ -149,8 +158,15 @@ protected:
    */
   virtual void publishCpuUsage(tier4_external_api_msgs::msg::CpuUsage usage);
 
+  // Updater won't be changed after initialization. No need to protect it with mutex.
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
+  std::mutex mutex_context_;  //!< @brief mutex for protecting the class context
+  // Unit tests modify these variables.
+  // Therefore, they should be protected with mutex_context_.
+  // NOTE:
+  //   Though current implementation of unit tests disables the timer callback,
+  //   the context variables still should be protected by mutex_context_.
   char hostname_[HOST_NAME_MAX + 1];              //!< @brief host name
   int num_cores_;                                 //!< @brief number of cores
   std::vector<CpuTemperatureInfo> temperatures_;  //!< @brief CPU list for temperature
@@ -158,7 +174,8 @@ protected:
   std::vector<int> usage_warn_check_count_;  //!< @brief CPU list for usage over warn check counter
   std::vector<int>
     usage_error_check_count_;  //!< @brief CPU list for usage over error check counter
-
+  // Though node parameters are read-only after initialization, unit tests modify them.
+  // Therefore, they should be protected with mutex_context_, too.
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
   float usage_error_;      //!< @brief CPU usage(%) to generate error
   int usage_warn_count_;   //!< @brief continuous count over usage_warn_ to generate warning
@@ -194,11 +211,28 @@ protected:
   rclcpp::TimerBase::SharedPtr timer_;  //!< @brief timer to collect cpu statistics
   rclcpp::CallbackGroup::SharedPtr timer_callback_group_;  //!< @brief Callback Group
 
-  std::mutex mutex_;                  //!< @brief mutex for protecting snapshot
+  std::mutex mutex_snapshot_;         //!< @brief mutex for protecting snapshot
   TemperatureData temperature_data_;  //!< @brief snapshot of CPU temperature
   UsageData usage_data_;              //!< @brief snapshot of CPU usage
   LoadData load_data_;                //!< @brief snapshot of CPU load average
   FrequencyData frequency_data_;      //!< @brief snapshot of CPU frequency
+
+private:
+  /**
+   * @brief get names of core temperature files
+   */
+  virtual void getTemperatureFileNames();
+
+  /**
+   * @brief get names of cpu frequency files
+   */
+  virtual void getFrequencyFileNames();
+
+  // Lazy initialization.
+  // File name lists are initialized at the first call of onTimer()
+  // so that virtual functions can be called.
+  std::atomic<bool> is_temperature_file_names_initialized_;
+  std::atomic<bool> is_frequency_file_names_initialized_;
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_

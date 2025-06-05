@@ -29,7 +29,7 @@
 #include <fmt/format.h>
 
 #include <algorithm>
-#include <chrono>  // for 1s
+#include <chrono>
 #include <cstdio>
 #include <regex>
 #include <string>
@@ -65,7 +65,9 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   usage_average_(declare_parameter<bool>(
     "usage_avg", true,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-      "Use average CPU usage across all processors. Cannot be changed after initialization.")))
+      "Use average CPU usage across all processors. Cannot be changed after initialization."))),
+  is_temperature_file_names_initialized_(false),
+  is_frequency_file_names_initialized_(false)
 {
   gethostname(hostname_, sizeof(hostname_));
   num_cores_ = boost::thread::hardware_concurrency();
@@ -80,7 +82,7 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   updater_.add("CPU Frequency", this, &CPUMonitorBase::updateFrequency);
   // Data format of ThermalThrottling differs among platforms.
   // So checking of status and updating of diagnostic are executed simultaneously.
-  updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::checkThermalThrottling);
+  updater_.add("CPU Thermal Throttling", this, &CPUMonitorBase::updateThermalThrottling);
 
   // Publisher
   rclcpp::QoS durable_qos{1};
@@ -110,53 +112,68 @@ void CPUMonitorBase::checkTemperature()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  if (temperatures_.empty()) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    temperature_data_.clear();
-    temperature_data_.summary_status = DiagStatus::ERROR;
-    temperature_data_.summary_message = "temperature files not found";
-    return;
-  }
-
-  int level = DiagStatus::OK;
+  int total_level = DiagStatus::OK;
   std::string error_str = "";
   std::vector<TemperatureData::CoreTemperature> temporary_core_data{};
+  {
+    // Start of critical section for protecting the class context
+    //  from race conditions with the unit tests.
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
+    // Lazy initialization for polymorphism.
+    if (!is_temperature_file_names_initialized_.exchange(true)) {
+      getTemperatureFileNames();
+    }
+    if (temperatures_.empty()) {
+      // Note that the mutex_context_ is locked.
+      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+      temperature_data_.clear();
+      temperature_data_.summary_status = DiagStatus::ERROR;
+      temperature_data_.summary_message = "temperature files not found";
+      return;
+    }
 
-  for (const auto & entry : temperatures_) {
-    // Read temperature file
-    const fs::path path(entry.path_);
-    fs::ifstream ifs(path, std::ios::in);
-    if (!ifs) {
-      error_str = "file open error";
+    for (const auto & entry : temperatures_) {
+      // Read temperature file
+      const fs::path path(entry.path_);
+      fs::ifstream ifs(path, std::ios::in);
+      if (!ifs) {
+        error_str = "file open error";
+        temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
+          entry.label_, DiagStatus::ERROR, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
+        continue;
+      }
+
+      float temperature;
+      ifs >> temperature;
+      ifs.close();
+
+      int core_level = DiagStatus::OK;
+      if (temperature >= 95000) {
+        core_level = DiagStatus::ERROR;
+        total_level = DiagStatus::ERROR;
+      } else if (temperature >= 90000) {
+        core_level = DiagStatus::WARN;
+        if (total_level != DiagStatus::ERROR) {
+          total_level = DiagStatus::WARN;
+        }
+      }
+      temperature /= 1000;
       temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
-        entry.label_, DiagStatus::ERROR, 0.0f, error_str, entry.path_});
-      continue;
+        entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
     }
-
-    float temperature;
-    ifs >> temperature;
-    ifs.close();
-    temperature /= 1000;
-    temporary_core_data.emplace_back(
-      TemperatureData::CoreTemperature{entry.label_, DiagStatus::OK, temperature, "", ""});
-    if (temperature > 90) {
-      level = DiagStatus::ERROR;
-      error_str = "temperature over 90C";
-    } else if (temperature > 80) {
-      level = DiagStatus::WARN;
-      error_str = "temperature over 80C";
-    }
+    // End of critical section
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   temperature_data_.clear();
+  temperature_data_.core_data = temporary_core_data;
   if (!error_str.empty()) {
+    // A fatal error occurred at least once.
     temperature_data_.summary_status = DiagStatus::ERROR;
     temperature_data_.summary_message = error_str;
   } else {
-    temperature_data_.core_data = temporary_core_data;
-    temperature_data_.summary_status = level;
-    temperature_data_.summary_message = temperature_dictionary_.at(level);
+    temperature_data_.summary_status = total_level;
+    temperature_data_.summary_message = temperature_dictionary_.at(total_level);
   }
 
   // Measure elapsed time since start time
@@ -167,26 +184,17 @@ void CPUMonitorBase::checkTemperature()
 
 void CPUMonitorBase::updateTemperature(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
-
-  int level = DiagStatus::OK;
-  std::string error_str = "";
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   for (const auto & entry : temperature_data_.core_data) {
     if (entry.status == DiagStatus::OK) {
       stat.addf(entry.label, "%.1f DegC", entry.temperature);
     } else {
-      level = entry.status;
-      error_str = entry.error_key;
       stat.add(entry.error_key, entry.error_value);
     }
   }
 
-  if (!error_str.empty()) {
-    stat.summary(temperature_data_.summary_status, error_str);
-  } else {
-    stat.summary(level, temperature_dictionary_.at(level));
-  }
+  stat.summary(temperature_data_.summary_status, temperature_data_.summary_message);
   stat.addf("execution time", "%f ms", temperature_data_.elapsed_ms);
 }
 
@@ -198,7 +206,7 @@ void CPUMonitorBase::checkUsage()
   std::vector<CpuUsageStatistics::CoreUsageInfo> core_usage_info;  // TODO(masakinishikawa): Allocated on heap.
   cpu_usage_statistics_.collect_cpu_statistics(core_usage_info);  // May take a while.
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   usage_data_.clear();
 
   int level = DiagStatus::OK;
@@ -237,6 +245,8 @@ void CPUMonitorBase::checkUsage()
   }
   usage_data_.summary_status = whole_level;
   usage_data_.summary_message = load_dictionary_.at(whole_level);
+  usage_data_.error_key = "";
+  usage_data_.error_value = "";
 
   // Measure elapsed time since start time for reporting.
   const auto t_end = std::chrono::high_resolution_clock::now();
@@ -246,12 +256,12 @@ void CPUMonitorBase::checkUsage()
 
 void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   tier4_external_api_msgs::msg::CpuUsage cpu_usage;
   using CpuStatus = tier4_external_api_msgs::msg::CpuStatus;
 
-  if (usage_data_.summary_status != DiagStatus::OK) {
+  if (!usage_data_.error_key.empty()) {
     stat.summary(usage_data_.summary_status, usage_data_.summary_message);
     stat.add(usage_data_.error_key, usage_data_.error_value);
     cpu_usage.all.status = CpuStatus::STALE;
@@ -292,6 +302,7 @@ void CPUMonitorBase::updateUsage(diagnostic_updater::DiagnosticStatusWrapper & s
 
 int CPUMonitorBase::CpuUsageToLevel(const std::string & cpu_name, float usage)
 {
+  std::lock_guard<std::mutex> lock_context(mutex_context_);
   // cpu name to counter index
   int idx;
   try {
@@ -301,10 +312,10 @@ int CPUMonitorBase::CpuUsageToLevel(const std::string & cpu_name, float usage)
     }
     idx = num + 1;
   } catch (std::exception &) {
-    if (cpu_name == std::string("all")) {  // system cpu usage : See /proc/stat in "man 5 proc"
+    if (cpu_name == std::string("all")) {  // system cpu usage :  See /proc/stat in "man 5 proc"
       idx = 0;
     } else {
-      idx = num_cores_ + 1;  // individual cpu usage : See /proc/stat in "man 5 proc"
+      idx = num_cores_ + 1;  // individual cpu usage :  See /proc/stat in "man 5 proc"
     }
   }
 
@@ -344,7 +355,7 @@ void CPUMonitorBase::checkLoad()
   std::ifstream ifs("/proc/loadavg", std::ios::in);
 
   if (!ifs) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
@@ -357,7 +368,7 @@ void CPUMonitorBase::checkLoad()
   std::string line;
 
   if (!std::getline(ifs, line)) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
@@ -370,7 +381,7 @@ void CPUMonitorBase::checkLoad()
   if (
     sscanf(line.c_str(), "%lf %lf %lf", &load_average[0], &load_average[1], &load_average[2]) !=
     3) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
     load_data_.clear();
     load_data_.summary_status = DiagStatus::ERROR;
     load_data_.summary_message = "uptime error";
@@ -384,7 +395,7 @@ void CPUMonitorBase::checkLoad()
   load_average[1] /= num_cores_;
   load_average[2] /= num_cores_;
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   load_data_.clear();
   load_data_.summary_status = DiagStatus::OK;
   load_data_.summary_message = "OK";
@@ -400,7 +411,7 @@ void CPUMonitorBase::checkLoad()
 
 void CPUMonitorBase::updateLoad(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   if (load_data_.summary_status != DiagStatus::OK) {
     stat.summary(load_data_.summary_status, load_data_.summary_message);
@@ -416,10 +427,21 @@ void CPUMonitorBase::updateLoad(diagnostic_updater::DiagnosticStatusWrapper & st
   stat.addf("execution time", "%f ms", load_data_.elapsed_ms);
 }
 
-void CPUMonitorBase::checkThermalThrottling(
-  [[maybe_unused]] diagnostic_updater::DiagnosticStatusWrapper & stat)
+void CPUMonitorBase::checkThermalThrottling()
 {
   RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::checkThermalThrottling not implemented.");
+}
+
+void CPUMonitorBase::updateThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // Call derived class implementation
+  updateThermalThrottlingImpl(stat);
+}
+
+void CPUMonitorBase::updateThermalThrottlingImpl(
+  [[maybe_unused]] diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
 }
 
 void CPUMonitorBase::checkFrequency()
@@ -427,32 +449,45 @@ void CPUMonitorBase::checkFrequency()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  if (frequencies_.empty()) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    frequency_data_.clear();
-    frequency_data_.summary_status = DiagStatus::ERROR;
-    frequency_data_.summary_message = "frequency files not found";
-    frequency_data_.elapsed_ms = 0.0f;
-    return;
-  }
-
   std::vector<FrequencyData::CoreFrequency> temporary_core_data{};
+  {
+    // Start of critical section for protecting the class context
+    //  from race conditions with the unit tests.
+    std::lock_guard<std::mutex> lock_context(mutex_context_);
+    // Lazy initialization for polymorphism.
+    if (!is_frequency_file_names_initialized_.exchange(true)) {
+      getFrequencyFileNames();
+    }
+    if (frequencies_.empty()) {
+      // Note that the mutex_context_ is locked.
+      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+      frequency_data_.clear();
+      frequency_data_.summary_status = DiagStatus::ERROR;
+      frequency_data_.summary_message = "frequency files not found";
+      frequency_data_.elapsed_ms = 0.0f;
+      return;
+    }
 
-  for (const auto & entry : frequencies_) {
-    // Read scaling_cur_freq file
-    const fs::path path(entry.path_);
-    fs::ifstream ifs(path, std::ios::in);
-    if (ifs) {
+    for (const auto & entry : frequencies_) {
+      // Read scaling_cur_freq file
+      const fs::path path(entry.path_);
+      fs::ifstream ifs(path, std::ios::in);
+      if (!ifs) {
+        temporary_core_data.emplace_back(
+          FrequencyData::CoreFrequency{entry.index_, DiagStatus::ERROR, 0});
+        continue;
+      }
       std::string line;
       if (std::getline(ifs, line)) {
         temporary_core_data.emplace_back(
           FrequencyData::CoreFrequency{entry.index_, DiagStatus::OK, std::stoi(line)});
       }
+      ifs.close();
     }
-    ifs.close();
+    // End of critical section
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
   frequency_data_.clear();
   frequency_data_.core_data = temporary_core_data;
   frequency_data_.summary_status = DiagStatus::OK;
@@ -466,7 +501,7 @@ void CPUMonitorBase::checkFrequency()
 
 void CPUMonitorBase::updateFrequency(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
   if (frequency_data_.summary_status != DiagStatus::OK) {
     stat.summary(frequency_data_.summary_status, frequency_data_.summary_message);
@@ -474,7 +509,10 @@ void CPUMonitorBase::updateFrequency(diagnostic_updater::DiagnosticStatusWrapper
   }
 
   for (const auto & entry : frequency_data_.core_data) {
-    stat.addf(fmt::format("CPU {}: clock", entry.index), "%d MHz", (entry.frequency_khz / 1000));
+    if (entry.status == DiagStatus::OK) {
+      stat.addf(fmt::format("CPU {}: clock", entry.index), "%d MHz", (entry.frequency_khz / 1000));
+    }
+    // Errors are just ignored. The same behavior as the previous implementation.
   }
 
   stat.summary(frequency_data_.summary_status, frequency_data_.summary_message);
@@ -488,6 +526,7 @@ void CPUMonitorBase::getTemperatureFileNames()
   RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::getTemperatureFileNames not implemented.");
 }
 
+// This function is called from a locked context in the timer callback.
 void CPUMonitorBase::getFrequencyFileNames()
 {
   const fs::path root("/sys/devices/system/cpu");
@@ -536,4 +575,5 @@ void CPUMonitorBase::onTimer()
   checkUsage();
   checkLoad();
   checkFrequency();
+  checkThermalThrottling();
 }
