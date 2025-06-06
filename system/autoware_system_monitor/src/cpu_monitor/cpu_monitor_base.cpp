@@ -224,7 +224,7 @@ void CPUMonitorBase::checkUsage()
     // Some of the members of CpuUsageStatistics::CoreUsageInfo are not used.
 
     // CpuUsageToLevel() converts usage to warning and error levels.
-    // It also counts occurence of warning and error in addition to conversion.
+    // It also counts occurrence of warning and error in addition to conversion.
     float total_usage = usage.total_usage_percent * 1e-2;
     bool get_cpu_name = false;  // TODO(masakinishikawa): Check if cpu_name is available.
     if (get_cpu_name) {

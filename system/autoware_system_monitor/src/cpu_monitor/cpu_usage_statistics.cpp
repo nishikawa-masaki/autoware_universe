@@ -131,7 +131,7 @@ void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & cor
     core_usage.softirq_percent = (static_cast<float>(softirq_delta) / total_all_delta_float) * 100.0f;
     core_usage.steal_percent = (static_cast<float>(steal_delta) / total_all_delta_float) * 100.0f;
     core_usage.guest_percent = (static_cast<float>(guest_delta) / total_all_delta_float) * 100.0f;
-    core_usage.gnice_percent = (static_cast<float>(guest_nice_delta) / total_all_delta_float) * 100.0f;
+    core_usage.guest_nice_percent = (static_cast<float>(guest_nice_delta) / total_all_delta_float) * 100.0f;
     core_usage.total_usage_percent = 100.0f - core_usage.idle_percent;
 
     // Add to CPU info

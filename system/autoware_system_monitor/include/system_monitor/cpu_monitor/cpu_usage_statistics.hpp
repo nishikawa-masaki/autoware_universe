@@ -40,7 +40,7 @@ public:
     float softirq_percent;      // Percentage of time spent handling soft IRQs
     float steal_percent;        // Percentage of time stolen by other VMs
     float guest_percent;        // Percentage of time spent running a virtual CPU
-    float gnice_percent;        // Percentage of time spent running a niced guest
+    float guest_nice_percent;   // Percentage of time spent running a virtual CPU in nice mode
     float total_usage_percent;  // Total CPU usage percentage (100% - idle%)
 
     // Constructor with default values
@@ -55,7 +55,7 @@ public:
       softirq_percent(0.0f),
       steal_percent(0.0f),
       guest_percent(0.0f),
-      gnice_percent(0.0f),
+      guest_nice_percent(0.0f),
       total_usage_percent(0.0f) {}
   };
 
