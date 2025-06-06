@@ -21,7 +21,7 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cstdint>  // For uint64_t
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
@@ -39,16 +39,16 @@ CpuUsageStatistics::CpuUsageStatistics()
 void CpuUsageStatistics::update_cpu_statistics()
 {
   core_usage_info_.clear();
-  // The vector is cleared, but the allocated memory won't be released..
+  // The vector is cleared, but the allocated memory won't be released.
 
   std::ifstream stat_file("/proc/stat");
   if (!stat_file.is_open()) {
     return;
   }
 
-  std::string line;
   current_statistics_.clear();  // Allocated memory area won't be released.
 
+  std::string line;
   while (std::getline(stat_file, line)) {
     try {
       std::istringstream iss(line);
