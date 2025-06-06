@@ -36,16 +36,18 @@ CpuUsageStatistics::CpuUsageStatistics()
 {
 }
 
-void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & core_usage_info)
+void CpuUsageStatistics::update_cpu_statistics()
 {
-  // Read current CPU statistics from /proc/stat
+  core_usage_info_.clear();
+  // The vector is cleared, but the allocated memory won't be released..
+
   std::ifstream stat_file("/proc/stat");
   if (!stat_file.is_open()) {
     return;
   }
 
   std::string line;
-  current_statistics_.clear();  // Allocated memory area is not released.
+  current_statistics_.clear();  // Allocated memory area won't be released.
 
   while (std::getline(stat_file, line)) {
     try {
@@ -77,7 +79,7 @@ void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & cor
   }
   stat_file.close();
 
-  // If this is the first call, just store the current stats and return empty info
+  // If this is the first call, just store the current statistics.
   if (first_call_) {
     swap_statistics();
     first_call_ = false;
@@ -135,7 +137,7 @@ void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & cor
     core_usage.total_usage_percent = 100.0f - core_usage.idle_percent;
 
     // Add to CPU info
-    core_usage_info.push_back(core_usage);
+    core_usage_info_.push_back(core_usage);
   }
 
   // Store current stats for next call
@@ -145,4 +147,19 @@ void CpuUsageStatistics::collect_cpu_statistics(std::vector<CoreUsageInfo> & cor
 void CpuUsageStatistics::swap_statistics()
 {
   std::swap(current_statistics_, previous_statistics_);
+}
+
+int32_t CpuUsageStatistics::get_num_cores() const
+{
+  return core_usage_info_.size();
+}
+
+CpuUsageStatistics::CoreUsageInfo CpuUsageStatistics::get_core_usage_info(int32_t core_index) const
+{
+  if (core_index < 0 || static_cast<size_t>(core_index) >= core_usage_info_.size()) {
+    // To avoid unexpected segmentation fault, return empty data.
+    CoreUsageInfo empty_info{};
+    return empty_info;
+  }
+  return core_usage_info_[core_index];
 }

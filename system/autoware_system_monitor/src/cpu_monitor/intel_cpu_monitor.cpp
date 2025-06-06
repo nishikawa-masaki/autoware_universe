@@ -213,8 +213,6 @@ void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatu
 // This function is called from a locked context in the timer callback.
 void CPUMonitor::getTemperatureFileNames()
 {
-  printf("Intel CPUMonitor::getTemperatureFileNames() called.\n");
-  fflush(stdout);
   const fs::path root("/sys/devices/platform/coretemp.0");
 
   if (!fs::exists(root)) {
@@ -251,8 +249,6 @@ void CPUMonitor::getTemperatureFileNames()
       ifs.close();
     }
     temperatures_.push_back(temperature);
-    printf("temperatures file: label %s path %s\n", temperature.label_.c_str(), temperature.path_.c_str());
-    fflush(stdout);
   }
 
   std::sort(

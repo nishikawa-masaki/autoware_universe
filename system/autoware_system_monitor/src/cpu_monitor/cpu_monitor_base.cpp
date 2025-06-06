@@ -203,16 +203,16 @@ void CPUMonitorBase::checkUsage()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  std::vector<CpuUsageStatistics::CoreUsageInfo> core_usage_info;  // TODO(masakinishikawa): Allocated on heap.
-  cpu_usage_statistics_.collect_cpu_statistics(core_usage_info);  // May take a while.
+  cpu_usage_statistics_.update_cpu_statistics();  // May take a while.
 
   std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
-  usage_data_.clear();
+  usage_data_.clear();  // The vector is cleared, but the allocated memory won't be reallocated.
 
-  int level = DiagStatus::OK;
   int whole_level = DiagStatus::OK;
 
-  for (const auto & usage : core_usage_info) {
+  int32_t num_cores = cpu_usage_statistics_.get_num_cores();
+  for (int32_t core_index = 0; core_index < num_cores; ++core_index) {
+    CpuUsageStatistics::CoreUsageInfo usage = cpu_usage_statistics_.get_core_usage_info(core_index);
     UsageData::CpuUsage cpu_usage;
     cpu_usage.label = usage.name;
     cpu_usage.usr = usage.user_percent;
@@ -226,8 +226,8 @@ void CPUMonitorBase::checkUsage()
     // CpuUsageToLevel() converts usage to warning and error levels.
     // It also counts occurrence of warning and error in addition to conversion.
     float total_usage = usage.total_usage_percent * 1e-2;
-    bool get_cpu_name = false;  // TODO(masakinishikawa): Check if cpu_name is available.
-    if (get_cpu_name) {
+    int level;
+    if (!usage.name.empty()) {
       level = CpuUsageToLevel(usage.name, total_usage);
     } else {
       level = CpuUsageToLevel(std::string("err"), total_usage);

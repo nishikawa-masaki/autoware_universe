@@ -60,10 +60,22 @@ public:
   };
 
   /**
-   * @brief Collect CPU statistics and calculate usage percentages
-   * @param [out] core_usage_info Vector to store the collected CPU usage information
+   * @brief Update CPU statistics data
    */
-  void collect_cpu_statistics(std::vector<CoreUsageInfo> & core_usage_info);
+  void update_cpu_statistics();
+
+  /**
+   * @brief Get the number of cores including the "all" core
+   * @return The number of cores
+   */
+  int32_t get_num_cores() const;
+
+  /**
+   * @brief Get the CPU usage information for a specific core
+   * @param [in] core_index The index of the core
+   * @return The CPU usage information for the specified core
+   */
+  CoreUsageInfo get_core_usage_info(int32_t core_index) const;
 
 private:
   /**
@@ -107,11 +119,18 @@ private:
     }
   };
 
-  bool first_call_;  // Flag to indicate first call
+  bool first_call_;  // Flag to indicate first call of update_cpu_statistics().
   std::vector<CpuStatistics> statistics_1_;  // Previous CPU statistics
   std::vector<CpuStatistics> statistics_2_;  // Previous CPU statistics
   std::vector<CpuStatistics> & current_statistics_;   // Current CPU statistics
   std::vector<CpuStatistics> & previous_statistics_;  // Previous CPU statistics
+
+  /**
+   * @brief Vector of CPU usage statistics for each core
+   * @note Allocated on heap and won't be reallocated during the lifetime of the instance.
+   */
+  std::vector<CpuUsageStatistics::CoreUsageInfo> core_usage_info_{};
+
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_USAGE_STATISTICS_HPP_

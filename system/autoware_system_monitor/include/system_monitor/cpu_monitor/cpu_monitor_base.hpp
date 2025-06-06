@@ -201,7 +201,7 @@ protected:
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "unused"}, {DiagStatus::ERROR, "throttling"}};
 
   /**
-   * @brief CPU usage statistics
+   * @brief Class instance for collecting CPU usage statistics
    */
   CpuUsageStatistics cpu_usage_statistics_;
 
