@@ -186,7 +186,7 @@ protected:
 #ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
   int temperature_warn_;   //!< @brief CPU temperature to generate warning
   int temperature_error_;  //!< @brief CPU temperature to generate error
-#endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
+#endif                     // ENABLE_TEMPERATURE_DIAGNOSTICS
 
   /**
    * @brief CPU temperature status messages
