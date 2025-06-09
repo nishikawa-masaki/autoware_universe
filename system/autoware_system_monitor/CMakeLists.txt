@@ -31,6 +31,14 @@ endif()
 
 ## Declare a C++ executable
 
+## Warning/Error about temperature used to be implemented,
+## but they were removed in favor of warning/error about thermal throttling.
+## add_definitions(-DENABLE_TEMPERATURE_DIAGNOSTICS)
+
+## Warning/Error about CPU load average used to be implemented,
+## but they were removed to avoid false alarms.
+## add_definitions(-DENABLE_LOAD_AVERAGE_DIAGNOSTICS)
+
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(CMAKE_CPU_PLATFORM "intel")
   add_definitions(-D_CPU_INTEL_)

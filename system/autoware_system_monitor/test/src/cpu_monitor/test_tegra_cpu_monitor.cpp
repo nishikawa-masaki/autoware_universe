@@ -90,6 +90,9 @@ public:
     usage_error_ = usage_error;
   }
 
+// Warning/Error about CPU load average used to be implemented,
+// but they were removed to avoid false alarms.
+#ifdef ENABLE_LOAD_AVERAGE_DIAGNOSTICS
   void changeLoad1Warn(float load1_warn)
   {
     std::lock_guard<std::mutex> lock_context(mutex_context_);
@@ -101,6 +104,7 @@ public:
     std::lock_guard<std::mutex> lock_context(mutex_context_);
     load5_warn_ = load5_warn;
   }
+#endif  // ENABLE_LOAD_AVERAGE_DIAGNOSTICS
 
   void update() { updater_.force_update(); }
 
@@ -207,6 +211,9 @@ protected:
   }
 };
 
+// Warning/Error about temperature used to be implemented,
+// but they were removed in favor of warning/error about thermal throttling.
+#ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
 TEST_F(CPUMonitorTestSuite, tempWarnTest)
 {
   // Verify normal behavior
@@ -293,6 +300,7 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
 }
+#endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
 
 TEST_F(CPUMonitorTestSuite, tempTemperatureFilesNotFoundTest)
 {
@@ -418,6 +426,9 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
   }
 }
 
+// Warning/Error about CPU load average used to be implemented,
+// but they were removed to avoid false alarms.
+#ifdef ENABLE_LOAD_AVERAGE_DIAGNOSTICS
 TEST_F(CPUMonitorTestSuite, load1WarnTest)
 {
   // Verify normal behavior
@@ -497,6 +508,7 @@ TEST_F(CPUMonitorTestSuite, load5WarnTest)
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
 }
+#endif  // ENABLE_LOAD_AVERAGE_DIAGNOSTICS
 
 TEST_F(CPUMonitorTestSuite, freqTest)
 {

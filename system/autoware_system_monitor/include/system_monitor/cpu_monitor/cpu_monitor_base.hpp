@@ -181,6 +181,12 @@ protected:
   int usage_warn_count_;   //!< @brief continuous count over usage_warn_ to generate warning
   int usage_error_count_;  //!< @brief continuous count over usage_error_ to generate error
   bool usage_average_;     //!< @brief Check CPU usage calculated as averages among all processors
+// Warning/Error about temperature used to be implemented,
+// but they were removed in favor of warning/error about thermal throttling.
+#ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
+  int temperature_warn_;   //!< @brief CPU temperature to generate warning
+  int temperature_error_;  //!< @brief CPU temperature to generate error
+#endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
 
   /**
    * @brief CPU temperature status messages

@@ -66,6 +66,18 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
     "usage_avg", true,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
       "Use average CPU usage across all processors. Cannot be changed after initialization."))),
+// Warning/Error about temperature used to be implemented,
+// but they were removed in favor of warning/error about thermal throttling.
+#ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
+  temperature_warn_(declare_parameter<int>(
+    "temperature_warn", 90000,
+    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+      "Threshold for CPU temperature warning. Cannot be changed after initialization."))),
+  temperature_error_(declare_parameter<int>(
+    "temperature_error", 95000,
+    rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+      "Threshold for CPU temperature error. Cannot be changed after initialization."))),
+#endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
   is_temperature_file_names_initialized_(false),
   is_frequency_file_names_initialized_(false)
 {
@@ -148,15 +160,20 @@ void CPUMonitorBase::checkTemperature()
       ifs.close();
 
       int core_level = DiagStatus::OK;
-      if (temperature >= 95000) {
+// Warning/Error about temperature used to be implemented,
+// but they were removed in favor of warning/error about thermal throttling.
+#ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
+      if (temperature >= temperature_error_) {
         core_level = DiagStatus::ERROR;
         total_level = DiagStatus::ERROR;
-      } else if (temperature >= 90000) {
+      } else if (temperature >= temperature_warn_) {
         core_level = DiagStatus::WARN;
         if (total_level != DiagStatus::ERROR) {
           total_level = DiagStatus::WARN;
         }
       }
+#endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
+
       temperature /= 1000;
       temporary_core_data.emplace_back(TemperatureData::CoreTemperature{
         entry.label_, DiagStatus::OK, core_level, temperature, "", ""});
