@@ -106,8 +106,9 @@ public:
     usage_error_ = usage_error;
   }
 
-  // Currently, there is no parameter to define the warning level of CPU Load Average.
-#if 0
+// Warning/Error about CPU load average used to be implemented,
+// but they were removed to avoid false alarms.
+#ifdef ENABLE_LOAD_AVERAGE_DIAGNOSTICS
   void changeLoad1Warn(float load1_warn)
   {
     std::lock_guard<std::mutex> lock_context(mutex_context_);
@@ -119,7 +120,7 @@ public:
     std::lock_guard<std::mutex> lock_context(mutex_context_);
     load5_warn_ = load5_warn;
   }
-#endif  // 0
+#endif  // ENABLE_LOAD_AVERAGE_DIAGNOSTICS
 
   void update() { updater_.force_update(); }
 
@@ -395,6 +396,9 @@ void stop_msr_reader()
 }
 }  // namespace msr_reader
 
+// Warning/Error about temperature used to be implemented,
+// but they were removed in favor of warning/error about thermal throttling.
+#ifdef ENABLE_TEMPERATURE_DIAGNOSTICS
 TEST_F(CPUMonitorTestSuite, tempWarnTest)
 {
   // Skip test if process runs inside CI environment
@@ -492,6 +496,7 @@ TEST_F(CPUMonitorTestSuite, tempErrorTest)
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
 }
+#endif  // ENABLE_TEMPERATURE_DIAGNOSTICS
 
 TEST_F(CPUMonitorTestSuite, tempTemperatureFilesNotFoundTest)
 {
@@ -636,7 +641,9 @@ TEST_F(CPUMonitorTestSuite, usageMpstatNotFoundTest)
     "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat");
 }
 
-// Currently, there is no parameter to define the warning level of CPU Load Average.
+// Warning/Error about CPU load averatge used to be implemented,
+// but they were removed to avoid false alarms.
+#ifdef ENABLE_LOAD_AVERAGE_DIAGNOSTICS
 TEST_F(CPUMonitorTestSuite, load1WarnTest)
 {
   // Verify normal behavior
@@ -645,13 +652,38 @@ TEST_F(CPUMonitorTestSuite, load1WarnTest)
 
     // Verify
     DiagStatus status;
+    std::string value;
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Load Average", status));
-    // Depending on running situation of machine.
-    ASSERT_TRUE(status.level == DiagStatus::OK);
+    ASSERT_EQ(status.level, DiagStatus::OK);
+  }
+
+  // Verify warning
+  {
+    // Change warning level
+    monitor_->changeLoad1Warn(0.0);
+
+    updatePublishSubscribe();
+
+    // Verify
+    DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("CPU Load Average", status));
+    ASSERT_EQ(status.level, DiagStatus::WARN);
+  }
+
+  // Verify normal behavior
+  {
+    // Change back to normal
+    monitor_->changeLoad1Warn(0.90);
+
+    updatePublishSubscribe();
+
+    // Verify
+    DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("CPU Load Average", status));
+    ASSERT_EQ(status.level, DiagStatus::OK);
   }
 }
 
-// Currently, there is no parameter to define the warning level of CPU Load Average.
 TEST_F(CPUMonitorTestSuite, load5WarnTest)
 {
   // Verify normal behavior
@@ -662,10 +694,36 @@ TEST_F(CPUMonitorTestSuite, load5WarnTest)
     DiagStatus status;
     std::string value;
     ASSERT_TRUE(monitor_->findDiagStatus("CPU Load Average", status));
-    // Depending on running situation of machine.
-    ASSERT_TRUE(status.level == DiagStatus::OK);
+    ASSERT_EQ(status.level, DiagStatus::OK);
+  }
+
+  // Verify warning
+  {
+    // Change warning level
+    monitor_->changeLoad5Warn(0.0);
+
+    updatePublishSubscribe();
+
+    // Verify
+    DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("CPU Load Average", status));
+    ASSERT_EQ(status.level, DiagStatus::WARN);
+  }
+
+  // Verify normal behavior
+  {
+    // Change back to normal
+    monitor_->changeLoad5Warn(0.80);
+
+    updatePublishSubscribe();
+
+    // Verify
+    DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("CPU Load Average", status));
+    ASSERT_EQ(status.level, DiagStatus::OK);
   }
 }
+#endif  // ENABLE_LOAD_AVERAGE_DIAGNOSTICS
 
 TEST_F(CPUMonitorTestSuite, throttlingTest)
 {
