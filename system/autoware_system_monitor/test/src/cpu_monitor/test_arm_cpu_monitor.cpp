@@ -483,7 +483,7 @@ TEST_F(CPUMonitorTestSuite, usageMpstatNotFoundTest)
     "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat");
 }
 
-// Warning/Error about CPU load averatge used to be implemented,
+// Warning/Error about CPU load average used to be implemented,
 // but they were removed to avoid false alarms.
 #ifdef ENABLE_LOAD_AVERAGE_DIAGNOSTICS
 TEST_F(CPUMonitorTestSuite, load1WarnTest)
