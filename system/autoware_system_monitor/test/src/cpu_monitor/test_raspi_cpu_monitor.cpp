@@ -151,6 +151,9 @@ public:
     exe_dir_ = exe_path.parent_path().generic_string();
     // Get dummy executable path
     mpstat_ = exe_dir_ + "/mpstat";
+    // Save environment variable PATH for restoration
+    auto env = boost::this_process::environment();
+    original_path_ = env["PATH"].to_string();
   }
 
 protected:
@@ -158,6 +161,7 @@ protected:
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr sub_;
   std::string exe_dir_;
   std::string mpstat_;
+  std::string original_path_;
 
   void SetUp()
   {
@@ -660,6 +664,7 @@ public:
   {
   }
   void update() { updater_.force_update(); }
+  void forceTimerEvent() { this->onTimer(); }
 };
 
 TEST_F(CPUMonitorTestSuite, dummyCPUMonitorTest)
