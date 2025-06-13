@@ -91,7 +91,7 @@ void CPUMonitor::checkThermalThrottling()
 }
 
 void CPUMonitor::updateThermalThrottlingImpl(
-  diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
