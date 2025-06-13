@@ -90,8 +90,7 @@ void CPUMonitor::checkThermalThrottling()
   thermal_throttling_data_.elapsed_ms = elapsed_ms;
 }
 
-void CPUMonitor::updateThermalThrottlingImpl(
-  diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
+void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
 
