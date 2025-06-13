@@ -358,6 +358,10 @@ void StaticObstacleAvoidanceModule::fillAvoidanceTargetObjects(
     if (!data.distance_to_red_traffic_light.has_value()) {
       return helper_->getForwardDetectionRange(data.closest_lanelet);
     }
+    if (data.distance_to_red_traffic_light.value() < -1.0) {
+      // The vehicle has already passed the stop line.
+      return helper_->getForwardDetectionRange(data.closest_lanelet);
+    }
     return std::min(
       helper_->getForwardDetectionRange(data.closest_lanelet),
       data.distance_to_red_traffic_light.value());
@@ -1951,7 +1955,7 @@ void StaticObstacleAvoidanceModule::insertPrepareVelocity(ShiftedPath & shifted_
   // insert slow down speed.
   const double current_target_velocity = autoware::motion_utils::calc_feasible_velocity_from_jerk(
     shift_length, helper_->getLateralMinJerkLimit(), distance_to_object);
-  if (current_target_velocity < getEgoSpeed() + parameters_->buf_slow_down_speed) {
+  if (current_target_velocity + parameters_->buf_slow_down_speed < getEgoSpeed()) {
     utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), decel_distance, parameters_->velocity_map.front(), shifted_path.path,
       slow_pose_);

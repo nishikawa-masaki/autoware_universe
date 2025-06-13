@@ -837,6 +837,7 @@ public:
   {
   }
   void update() { updater_.force_update(); }
+  void forceTimerEvent() { this->onTimer(); }
 };
 
 TEST_F(CPUMonitorTestSuite, dummyCPUMonitorTest)
@@ -845,7 +846,7 @@ TEST_F(CPUMonitorTestSuite, dummyCPUMonitorTest)
   std::unique_ptr<DummyCPUMonitor> monitor =
     std::make_unique<DummyCPUMonitor>("dummy_cpu_monitor", options);
 
-  monitor_->forceTimerEvent();
+  monitor->forceTimerEvent();
   // Publish topic
   monitor->update();
 }

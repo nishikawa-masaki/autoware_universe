@@ -562,6 +562,7 @@ public:
   {
   }
   void update() { updater_.force_update(); }
+  void forceTimerEvent() { this->onTimer(); }
 };
 
 TEST_F(CPUMonitorTestSuite, dummyCPUMonitorTest)
