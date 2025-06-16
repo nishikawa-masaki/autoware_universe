@@ -538,8 +538,6 @@ void CPUMonitorBase::updateFrequency(diagnostic_updater::DiagnosticStatusWrapper
 
 void CPUMonitorBase::getTemperatureFileNames()
 {
-  printf("CPUMonitorBase::getTemperatureFileNames() called.\n");
-  fflush(stdout);
   RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::getTemperatureFileNames not implemented.");
 }
 
