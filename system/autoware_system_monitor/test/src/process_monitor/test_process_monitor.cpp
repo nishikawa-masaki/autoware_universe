@@ -269,7 +269,8 @@ DummyProcFile dummy_proc_files[] = {
   {"dummy_proc_unreadable.tar.bz2"},          // Test data with unreadable /proc file system.
   {"dummy_proc_not_mounted.tar.bz2"},         // Test data with /proc not mounted.
   {"dummy_proc_no_uptime.tar.bz2"},           // Test data with no /proc/uptime.
-  {"dummy_proc_negative_priority.tar.bz2"},   // Test data with negative priority and real-time priority.
+  {"dummy_proc_negative_priority.tar.bz2"},   // Test data with negative priority and real-time
+                                              // priority.
 };
 
 struct DummyProcFilePair
