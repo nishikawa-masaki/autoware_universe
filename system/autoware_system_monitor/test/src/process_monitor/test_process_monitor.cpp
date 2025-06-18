@@ -232,15 +232,6 @@ protected:
     }
     return false;
   }
-
-  void modifyPath()
-  {
-    // Modify PATH temporarily
-    auto env = boost::this_process::environment();
-    std::string new_path = env["PATH"].to_string();
-    new_path.insert(0, fmt::format("{}:", exe_dir_));
-    env["PATH"] = new_path;
-  }
 };
 
 struct DummyProcFile
