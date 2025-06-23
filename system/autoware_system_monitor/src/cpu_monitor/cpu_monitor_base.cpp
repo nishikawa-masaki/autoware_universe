@@ -446,7 +446,7 @@ void CPUMonitorBase::updateLoad(diagnostic_updater::DiagnosticStatusWrapper & st
 
 void CPUMonitorBase::checkThermalThrottling()
 {
-  RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::checkThermalThrottling not implemented.");
+  RCLCPP_INFO_ONCE(this->get_logger(), "CPUMonitorBase::checkThermalThrottling not implemented.");
 }
 
 void CPUMonitorBase::updateThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)
@@ -458,7 +458,8 @@ void CPUMonitorBase::updateThermalThrottling(diagnostic_updater::DiagnosticStatu
 void CPUMonitorBase::updateThermalThrottlingImpl(
   [[maybe_unused]] diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
+  RCLCPP_INFO_ONCE(
+    this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
 }
 
 void CPUMonitorBase::checkFrequency()
@@ -538,7 +539,7 @@ void CPUMonitorBase::updateFrequency(diagnostic_updater::DiagnosticStatusWrapper
 
 void CPUMonitorBase::getTemperatureFileNames()
 {
-  RCLCPP_INFO(this->get_logger(), "CPUMonitorBase::getTemperatureFileNames not implemented.");
+  RCLCPP_INFO_ONCE(this->get_logger(), "CPUMonitorBase::getTemperatureFileNames not implemented.");
 }
 
 // This function is called from a locked context in the timer callback.
