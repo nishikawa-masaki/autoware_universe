@@ -582,7 +582,8 @@ void CPUMonitorBase::updateThermalThrottling(diagnostic_updater::DiagnosticStatu
 void CPUMonitorBase::updateThermalThrottlingImpl(
   [[maybe_unused]] diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  RCLCPP_INFO_ONCE(this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
+  RCLCPP_INFO_ONCE(
+    this->get_logger(), "CPUMonitorBase::checkThermalThrottlingImpl not implemented.");
 }
 
 void CPUMonitorBase::checkFrequency()

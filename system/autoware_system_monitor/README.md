@@ -25,9 +25,9 @@ This package provides the following nodes for monitoring system:
 - PC system intel core i7
 
 The following "once confirmed" platforms (or their successor) need to be tested again with the latest environment.
+
 - ~~NVIDIA Jetson AGX Xavier~~
 - ~~Raspberry Pi4 Model B~~
-
 
 ## How to use
 
