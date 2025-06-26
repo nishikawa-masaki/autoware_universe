@@ -591,7 +591,8 @@ void ProcessMonitor::fillTaskInfo(
   info.userName = convertUidToUserName(raw_p->status_info.real_uid);
   // For backward compatibility with the old implementation with Linux "top" command,
   // real-time processes need exceptional handling.
-  // Linux "top" command shows priority less than -99 and more than 999 as "rt", which means "real-time".
+  // Linux "top" command shows priority less than -99 and more than 999 as "rt", which means
+  // "real-time".
   if ((raw_p->stat_info.priority < -99) || (raw_p->stat_info.priority > 999)) {
     info.priority = "rt";
   } else {
