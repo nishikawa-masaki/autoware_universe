@@ -17,8 +17,8 @@
  * @brief 802.11 netlink-based interface class
  */
 
-#ifndef SYSTEM_MONITOR__NET_MONITOR__NL80211_HPP_
-#define SYSTEM_MONITOR__NET_MONITOR__NL80211_HPP_
+#ifndef NET_MONITOR__NL80211_HPP_
+#define NET_MONITOR__NL80211_HPP_
 
 class NL80211
 {
@@ -57,4 +57,4 @@ private:
   struct nl_cb * cb_;        //!< @brief Callback handle
 };
 
-#endif  // SYSTEM_MONITOR__NET_MONITOR__NL80211_HPP_
+#endif  // NET_MONITOR__NL80211_HPP_

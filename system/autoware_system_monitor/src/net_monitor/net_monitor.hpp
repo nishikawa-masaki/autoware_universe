@@ -17,8 +17,8 @@
  * @brief Net monitor class
  */
 
-#ifndef SYSTEM_MONITOR__NET_MONITOR__NET_MONITOR_HPP_
-#define SYSTEM_MONITOR__NET_MONITOR__NET_MONITOR_HPP_
+#ifndef NET_MONITOR__NET_MONITOR_HPP_
+#define NET_MONITOR__NET_MONITOR_HPP_
 
 #include "nl80211.hpp"
 #include "traffic_reader/traffic_reader_common.hpp"
@@ -410,4 +410,4 @@ protected:
   const std::string loopback_interface_name_ = "lo";
 };
 
-#endif  // SYSTEM_MONITOR__NET_MONITOR__NET_MONITOR_HPP_
+#endif  // NET_MONITOR__NET_MONITOR_HPP_

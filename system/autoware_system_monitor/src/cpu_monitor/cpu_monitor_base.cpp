@@ -18,6 +18,7 @@
  */
 
 #include "cpu_monitor_base.hpp"
+
 #include "cpu_information.hpp"
 #include "cpu_usage_statistics.hpp"
 

@@ -17,8 +17,8 @@
  * @brief diagnostics task for high load/memory procs
  */
 
-#ifndef SYSTEM_MONITOR__PROCESS_MONITOR__DIAG_TASK_HPP_
-#define SYSTEM_MONITOR__PROCESS_MONITOR__DIAG_TASK_HPP_
+#ifndef PROCESS_MONITOR__DIAG_TASK_HPP_
+#define PROCESS_MONITOR__DIAG_TASK_HPP_
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -115,4 +115,4 @@ private:
   struct ProcessInfo info_;    //!< @brief Struct for storing process information
 };
 
-#endif  // SYSTEM_MONITOR__PROCESS_MONITOR__DIAG_TASK_HPP_
+#endif  // PROCESS_MONITOR__DIAG_TASK_HPP_

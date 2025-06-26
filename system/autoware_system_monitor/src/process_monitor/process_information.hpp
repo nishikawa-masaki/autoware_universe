@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SYSTEM_MONITOR__PROCESS_MONITOR__PROCESS_INFORMATION_HPP_
-#define SYSTEM_MONITOR__PROCESS_MONITOR__PROCESS_INFORMATION_HPP_
+#ifndef PROCESS_MONITOR__PROCESS_INFORMATION_HPP_
+#define PROCESS_MONITOR__PROCESS_INFORMATION_HPP_
 
 // This file defines structures for process information.
 // As the definitions are implementation dependent,
@@ -96,4 +96,4 @@ struct ProcessStatistics
   double uptime_delta_sec;
 };
 
-#endif  // SYSTEM_MONITOR__PROCESS_MONITOR__PROCESS_INFORMATION_HPP_
+#endif  // PROCESS_MONITOR__PROCESS_INFORMATION_HPP_

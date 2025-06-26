@@ -17,8 +17,8 @@
  * @brief ARM CPU monitor class
  */
 
-#ifndef SYSTEM_MONITOR__CPU_MONITOR__ARM_CPU_MONITOR_HPP_
-#define SYSTEM_MONITOR__CPU_MONITOR__ARM_CPU_MONITOR_HPP_
+#ifndef CPU_MONITOR__ARM_CPU_MONITOR_HPP_
+#define CPU_MONITOR__ARM_CPU_MONITOR_HPP_
 
 #include "cpu_monitor_base.hpp"
 
@@ -61,4 +61,4 @@ protected:
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 };
 
-#endif  // SYSTEM_MONITOR__CPU_MONITOR__ARM_CPU_MONITOR_HPP_
+#endif  // CPU_MONITOR__ARM_CPU_MONITOR_HPP_

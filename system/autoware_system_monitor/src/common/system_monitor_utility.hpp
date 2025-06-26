@@ -17,8 +17,8 @@
  * @brief System Monitor Utility class
  */
 
-#ifndef SYSTEM_MONITOR__SYSTEM_MONITOR_UTILITY_HPP_
-#define SYSTEM_MONITOR__SYSTEM_MONITOR_UTILITY_HPP_
+#ifndef COMMON__SYSTEM_MONITOR_UTILITY_HPP_
+#define COMMON__SYSTEM_MONITOR_UTILITY_HPP_
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -121,4 +121,4 @@ public:
   }
 };
 
-#endif  // SYSTEM_MONITOR__SYSTEM_MONITOR_UTILITY_HPP_
+#endif  // COMMON__SYSTEM_MONITOR_UTILITY_HPP_

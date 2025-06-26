@@ -17,8 +17,8 @@
  * @brief Raspberry Pi CPU monitor class
  */
 
-#ifndef SYSTEM_MONITOR__CPU_MONITOR__RASPI_CPU_MONITOR_HPP_
-#define SYSTEM_MONITOR__CPU_MONITOR__RASPI_CPU_MONITOR_HPP_
+#ifndef CPU_MONITOR__RASPI_CPU_MONITOR_HPP_
+#define CPU_MONITOR__RASPI_CPU_MONITOR_HPP_
 
 #include "cpu_monitor_base.hpp"
 
@@ -108,4 +108,4 @@ protected:
   ThermalThrottlingData thermal_throttling_data_;
 };
 
-#endif  // SYSTEM_MONITOR__CPU_MONITOR__RASPI_CPU_MONITOR_HPP_
+#endif  // CPU_MONITOR__RASPI_CPU_MONITOR_HPP_

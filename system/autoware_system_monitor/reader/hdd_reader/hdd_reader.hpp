@@ -17,8 +17,8 @@
  * @brief HDD reader definitions
  */
 
-#ifndef SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_
-#define SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_
+#ifndef SYSTEM__AUTOWARE_SYSTEM_MONITOR__READER__HDD_READER__HDD_READER_HPP_
+#define SYSTEM__AUTOWARE_SYSTEM_MONITOR__READER__HDD_READER__HDD_READER_HPP_
 
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/serialization.hpp>
@@ -135,4 +135,4 @@ struct UnmountDeviceInfo
  */
 typedef std::map<std::string, HddInfo> HddInfoList;
 
-#endif  // SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_
+#endif  // SYSTEM__AUTOWARE_SYSTEM_MONITOR__READER__HDD_READER__HDD_READER_HPP_
