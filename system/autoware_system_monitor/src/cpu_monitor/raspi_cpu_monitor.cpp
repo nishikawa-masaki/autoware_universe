@@ -18,9 +18,8 @@
  */
 
 #include "raspi_cpu_monitor.hpp"
-// #include "cpu_information.hpp"
 
-// #include "common/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>

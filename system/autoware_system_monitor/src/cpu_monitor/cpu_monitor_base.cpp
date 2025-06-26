@@ -22,6 +22,7 @@
 #include "cpu_usage_statistics.hpp"
 
 #include <boost/filesystem.hpp>
+#include <boost/range/iterator_range_core.hpp>
 #include <boost/thread.hpp>
 
 #include <fmt/format.h>

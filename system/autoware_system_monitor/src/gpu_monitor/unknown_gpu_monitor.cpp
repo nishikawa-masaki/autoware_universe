@@ -17,7 +17,7 @@
  * @brief Unknown GPU monitor class
  */
 
-#include "system_monitor/gpu_monitor/unknown_gpu_monitor.hpp"
+#include "unknown_gpu_monitor.hpp"
 
 #include <string>
 

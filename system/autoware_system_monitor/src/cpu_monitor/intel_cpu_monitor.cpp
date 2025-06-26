@@ -21,7 +21,6 @@
 #include "cpu_information.hpp"
 
 #include "msr_reader/msr_reader.hpp"
-// #include "common/system_monitor_utility.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>

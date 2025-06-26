@@ -20,7 +20,7 @@
 #include "tegra_cpu_monitor.hpp"
 #include "cpu_information.hpp"
 
-// #include "common/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
 
 #include <string>
 #include <vector>
