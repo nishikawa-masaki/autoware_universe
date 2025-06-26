@@ -13,38 +13,17 @@
 // limitations under the License.
 
 /**
- * @file raspi_cpu_monitor.h
- * @brief Raspberry Pi CPU monitor class
+ * @file intel_cpu_monitor.h
+ * @brief  CPU monitor class
  */
 
-#ifndef SYSTEM_MONITOR__CPU_MONITOR__RASPI_CPU_MONITOR_HPP_
-#define SYSTEM_MONITOR__CPU_MONITOR__RASPI_CPU_MONITOR_HPP_
+#ifndef SYSTEM_MONITOR__CPU_MONITOR__INTEL_CPU_MONITOR_HPP_
+#define SYSTEM_MONITOR__CPU_MONITOR__INTEL_CPU_MONITOR_HPP_
 
-#include "system_monitor/cpu_monitor/cpu_monitor_base.hpp"
+#include "cpu_monitor_base.hpp"
 
 #include <string>
-
-#define raspiUnderVoltageDetected (1 << 0)              // 0x00001
-#define raspiArmFrequencyCapped (1 << 1)                // 0x00002
-#define raspiCurrentlyThrottled (1 << 2)                // 0x00004
-#define raspiSoftTemperatureLimitActive (1 << 3)        // 0x00008
-#define raspiUnderVoltageHasOccurred (1 << 16)          // 0x10000
-#define raspiArmFrequencyCappedHasOccurred (1 << 17)    // 0x20000
-#define raspiThrottlingHasOccurred (1 << 18)            // 0x40000
-#define raspiSoftTemperatureLimitHasOccurred (1 << 19)  // 0x80000
-
-#define raspiThermalThrottlingMask (raspiCurrentlyThrottled | raspiSoftTemperatureLimitActive)
-
-#define throttledToString(X)                                                              \
-  (((X) & raspiUnderVoltageDetected)              ? "Under-voltage detected"              \
-   : ((X) & raspiArmFrequencyCapped)              ? "Arm frequency capped"                \
-   : ((X) & raspiCurrentlyThrottled)              ? "Currently throttled"                 \
-   : ((X) & raspiSoftTemperatureLimitActive)      ? "Soft temperature limit active"       \
-   : ((X) & raspiUnderVoltageHasOccurred)         ? "Under-voltage has occurred"          \
-   : ((X) & raspiArmFrequencyCappedHasOccurred)   ? "Arm frequency capped has occurred"   \
-   : ((X) & raspiThrottlingHasOccurred)           ? "Throttling has occurred"             \
-   : ((X) & raspiSoftTemperatureLimitHasOccurred) ? "Soft temperature limit has occurred" \
-                                                  : "UNKNOWN")
+#include <vector>
 
 class CPUMonitor : public CPUMonitorBase
 {
@@ -64,12 +43,7 @@ public:
 
 protected:
   /**
-   * @brief get names for core temperature files
-   */
-  void getTemperatureFileNames() override;
-
-  /**
-   * @brief update CPU thermal throttling (implementation)
+   * @brief check CPU thermal throttling
    */
   void checkThermalThrottling() override;
 
@@ -82,8 +56,21 @@ protected:
   void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 
+  /**
+   * @brief get names for core temperature files
+   */
+  void getTemperatureFileNames() override;
+
+  /**
+   * @brief Add a loadable kernel module msr
+   */
+  void modprobeMSR();
+
   // The format of Thermal Throttling report depends on CPU model.
-  // So, Thermal Throttling report is implemented in derived class.
+  // Therefore, Thermal Throttling report is implemented in each derived class.
+
+  // Intel CPU uses msr_reader to get thermal throttling data.
+  int msr_reader_port_;  //!< @brief port number to connect to msr_reader
 
   struct ThermalThrottlingData
   {
@@ -92,7 +79,7 @@ protected:
     std::string summary_message;
     std::string error_key;
     std::string error_value;
-    std::string status;
+    std::vector<std::pair<std::string, std::string>> core_data;
 
     void clear()
     {
@@ -101,11 +88,11 @@ protected:
       summary_message.clear();
       error_key.clear();
       error_value.clear();
-      status.clear();
+      core_data.clear();  // Allocated heap memory is not released.
     }
   };
 
   ThermalThrottlingData thermal_throttling_data_;
 };
 
-#endif  // SYSTEM_MONITOR__CPU_MONITOR__RASPI_CPU_MONITOR_HPP_
+#endif  // SYSTEM_MONITOR__CPU_MONITOR__INTEL_CPU_MONITOR_HPP_

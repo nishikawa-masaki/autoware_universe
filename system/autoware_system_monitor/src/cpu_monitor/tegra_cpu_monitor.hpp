@@ -13,14 +13,14 @@
 // limitations under the License.
 
 /**
- * @file unknown_cpu_monitor.h
- * @brief Unknown CPU monitor class
+ * @file tegra_cpu_monitor.h
+ * @brief TEGRA CPU monitor class
  */
 
-#ifndef SYSTEM_MONITOR__CPU_MONITOR__UNKNOWN_CPU_MONITOR_HPP_
-#define SYSTEM_MONITOR__CPU_MONITOR__UNKNOWN_CPU_MONITOR_HPP_
+#ifndef SYSTEM_MONITOR__CPU_MONITOR__TEGRA_CPU_MONITOR_HPP_
+#define SYSTEM_MONITOR__CPU_MONITOR__TEGRA_CPU_MONITOR_HPP_
 
-#include "system_monitor/cpu_monitor/cpu_monitor_base.hpp"
+#include "cpu_monitor_base.hpp"
 
 #include <string>
 
@@ -39,6 +39,12 @@ public:
    * @param [in] options   Options associated with this node.
    */
   CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options);
+
+protected:
+  /**
+   * @brief get names for core temperature files
+   */
+  void getTemperatureFileNames() override;
 };
 
-#endif  // SYSTEM_MONITOR__CPU_MONITOR__UNKNOWN_CPU_MONITOR_HPP_
+#endif  // SYSTEM_MONITOR__CPU_MONITOR__TEGRA_CPU_MONITOR_HPP_

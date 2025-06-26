@@ -19,12 +19,14 @@ find_path(LIBNL3_INCLUDE_DIRS
 if(NVML_FOUND)
   include_directories(
     include
+    reader
     ${LIBNL3_INCLUDE_DIRS}
     ${NVML_INCLUDE_DIRS}
   )
 else()
   include_directories(
     include
+    reader
     ${LIBNL3_INCLUDE_DIRS}
   )
 endif()

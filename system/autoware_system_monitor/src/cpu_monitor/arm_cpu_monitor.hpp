@@ -13,17 +13,16 @@
 // limitations under the License.
 
 /**
- * @file intel_cpu_monitor.h
- * @brief  CPU monitor class
+ * @file arm_cpu_monitor.h
+ * @brief ARM CPU monitor class
  */
 
-#ifndef SYSTEM_MONITOR__CPU_MONITOR__INTEL_CPU_MONITOR_HPP_
-#define SYSTEM_MONITOR__CPU_MONITOR__INTEL_CPU_MONITOR_HPP_
+#ifndef SYSTEM_MONITOR__CPU_MONITOR__ARM_CPU_MONITOR_HPP_
+#define SYSTEM_MONITOR__CPU_MONITOR__ARM_CPU_MONITOR_HPP_
 
-#include "system_monitor/cpu_monitor/cpu_monitor_base.hpp"
+#include "cpu_monitor_base.hpp"
 
 #include <string>
-#include <vector>
 
 class CPUMonitor : public CPUMonitorBase
 {
@@ -43,6 +42,11 @@ public:
 
 protected:
   /**
+   * @brief get names for core temperature files
+   */
+  void getTemperatureFileNames() override;
+
+  /**
    * @brief check CPU thermal throttling
    */
   void checkThermalThrottling() override;
@@ -55,44 +59,6 @@ protected:
    */
   void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
-
-  /**
-   * @brief get names for core temperature files
-   */
-  void getTemperatureFileNames() override;
-
-  /**
-   * @brief Add a loadable kernel module msr
-   */
-  void modprobeMSR();
-
-  // The format of Thermal Throttling report depends on CPU model.
-  // Therefore, Thermal Throttling report is implemented in each derived class.
-
-  // Intel CPU uses msr_reader to get thermal throttling data.
-  int msr_reader_port_;  //!< @brief port number to connect to msr_reader
-
-  struct ThermalThrottlingData
-  {
-    float elapsed_ms;
-    int summary_status;
-    std::string summary_message;
-    std::string error_key;
-    std::string error_value;
-    std::vector<std::pair<std::string, std::string>> core_data;
-
-    void clear()
-    {
-      elapsed_ms = 0.0f;
-      summary_status = 0;
-      summary_message.clear();
-      error_key.clear();
-      error_value.clear();
-      core_data.clear();  // Allocated heap memory is not released.
-    }
-  };
-
-  ThermalThrottlingData thermal_throttling_data_;
 };
 
-#endif  // SYSTEM_MONITOR__CPU_MONITOR__INTEL_CPU_MONITOR_HPP_
+#endif  // SYSTEM_MONITOR__CPU_MONITOR__ARM_CPU_MONITOR_HPP_
