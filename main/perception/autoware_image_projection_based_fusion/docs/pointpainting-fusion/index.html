@@ -9177,10 +9177,66 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+        
+      
+      <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_10_5" >
+      
+      
+        
+          
+        
+          
+        
+      
+      
+        <label class="md-nav__link" for="__nav_8_10_5" id="__nav_8_10_5_label" tabindex="0">
+          Planning Validator
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_8_10_5_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_8_10_5">
+          <span class="md-nav__icon md-icon"></span>
+          Planning Validator
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../../../planning/autoware_planning_validator" class="md-nav__link">
-        Planning Validator
+      <a href="../../../../planning/planning_validator/autoware_planning_validator" class="md-nav__link">
+        About Planning Validator
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../planning/planning_validator/autoware_planning_validator_intersection_collision_checker" class="md-nav__link">
+        Intersection Collision Checker
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -13958,10 +14014,10 @@
 <td>TensorRT inference precision: <code>fp32</code> or <code>fp16</code></td>
 </tr>
 <tr>
-<td><code>post_process_params.score_threshold</code></td>
-<td>double</td>
-<td><code>0.4</code></td>
-<td>detected objects with score less than threshold are ignored</td>
+<td><code>post_process_params.score_thresholds</code></td>
+<td>list[double]</td>
+<td>[0.4, 0.4, 0.4, 0.4, 0.4]</td>
+<td>detected objects with score less than their label threshold are ignored.</td>
 </tr>
 <tr>
 <td><code>post_process_params.yaw_norm_thresholds</code></td>
