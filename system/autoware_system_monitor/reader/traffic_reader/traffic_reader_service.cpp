@@ -37,7 +37,7 @@ namespace traffic_reader_service
 {
 
 TrafficReaderService::TrafficReaderService(std::string socket_path)
-: socket_path_(std::move(socket_path)), stop_(false)
+: socket_path_(std::move(socket_path)), stop_(false), result_()
 {
 }
 

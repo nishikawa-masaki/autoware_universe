@@ -25,6 +25,8 @@
 #include <string>
 #include <vector>
 
+#ifdef _CPU_INTEL_
+
 class CPUMonitor : public CPUMonitorBase
 {
 public:
@@ -94,5 +96,7 @@ protected:
 
   ThermalThrottlingData thermal_throttling_data_;
 };
+
+#endif  // _CPU_INTEL_
 
 #endif  // CPU_MONITOR__INTEL_CPU_MONITOR_HPP_

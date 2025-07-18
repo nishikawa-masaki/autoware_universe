@@ -319,7 +319,7 @@ protected:
    * @param [in] device device name
    * @return result of success or failure
    */
-  int unmountDevice(std::string & device);
+  int unmountDevice(const std::string & device);
 
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
   rclcpp::TimerBase::SharedPtr timer_;   //!< @brief timer to get HDD information from HddReader

@@ -24,6 +24,8 @@
 
 #include <string>
 
+#ifdef _CPU_TEGRA_
+
 class CPUMonitor : public CPUMonitorBase
 {
 public:
@@ -46,5 +48,7 @@ protected:
    */
   void getTemperatureFileNames() override;
 };
+
+#endif  // _CPU_TEGRA_
 
 #endif  // CPU_MONITOR__TEGRA_CPU_MONITOR_HPP_

@@ -29,6 +29,8 @@
 #include <string>
 #include <vector>
 
+#ifdef _GPU_NVML_
+
 #define reasonToString(X)                                                                    \
   (((X) & nvmlClocksThrottleReasonGpuIdle)                     ? "GpuIdle"                   \
    : ((X) & nvmlClocksThrottleReasonApplicationsClocksSetting) ? "ApplicationsClocksSetting" \
@@ -156,5 +158,7 @@ protected:
   const std::map<int, const char *> frequency_dict_ = {
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "unsupported clock"}};
 };
+
+#endif  // _GPU_NVML_
 
 #endif  // GPU_MONITOR__NVML_GPU_MONITOR_HPP_

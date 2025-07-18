@@ -137,7 +137,7 @@ float NL80211::getBitrate(const char * ifa_name)
 {
   int ret;
   struct nl_msg * msg;
-  void * hdr;
+  const void * hdr;
   int index;
 
   bitrate_ = 0.0;

@@ -427,7 +427,7 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
     return -1;
   }
 
-  for (auto & hdd_device : hdd_devices) {
+  for (const auto & hdd_device : hdd_devices) {
     HddInfo info{};
 
     // Open a file
@@ -506,7 +506,7 @@ int unmount_device_with_lazy(boost::archive::text_iarchive & ia, boost::archive:
     return -1;
   }
 
-  for (auto & unmount_device : unmount_devices) {
+  for (const auto & unmount_device : unmount_devices) {
     int ret = 0;
     boost::process::ipstream is_out;
     boost::process::ipstream is_err;

@@ -71,7 +71,7 @@ protected:
    * @return if chronyc error occurred, return error string
    */
   std::string executeChronyc(
-    float & outOffset, std::map<std::string, std::string> & out_tracking_map,
+    float & out_offset, std::map<std::string, std::string> & out_tracking_map,
     std::string & pipe2_err_str);
 
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics

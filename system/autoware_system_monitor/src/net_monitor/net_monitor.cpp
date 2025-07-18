@@ -535,9 +535,9 @@ void NetMonitor::update_network_capacity(NetworkInfomation & network, int socket
 }
 
 void NetMonitor::update_network_information_by_routing_netlink(
-  NetworkInfomation & network, void * data, const rclcpp::Duration & duration)
+  NetworkInfomation & network, const void * data, const rclcpp::Duration & duration)
 {
-  auto * stats = static_cast<struct rtnl_link_stats *>(data);
+  const auto * stats = static_cast<const struct rtnl_link_stats *>(data);
 
   update_traffic(network, stats, duration);
 

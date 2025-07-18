@@ -24,6 +24,8 @@
 
 #include <string>
 
+#ifdef _CPU_RASPI_
+
 #define raspiUnderVoltageDetected (1 << 0)              // 0x00001
 #define raspiArmFrequencyCapped (1 << 1)                // 0x00002
 #define raspiCurrentlyThrottled (1 << 2)                // 0x00004
@@ -107,5 +109,7 @@ protected:
 
   ThermalThrottlingData thermal_throttling_data_;
 };
+
+#endif  // _CPU_RASPI_
 
 #endif  // CPU_MONITOR__RASPI_CPU_MONITOR_HPP_

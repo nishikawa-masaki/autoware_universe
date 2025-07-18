@@ -291,7 +291,7 @@ protected:
    * @param [in] duration Time from previous measurement
    */
   void update_network_information_by_routing_netlink(
-    NetworkInfomation & network, void * data, const rclcpp::Duration & duration);
+    NetworkInfomation & network, const void * data, const rclcpp::Duration & duration);
 
   /**
    * @brief Update network information about network traffic

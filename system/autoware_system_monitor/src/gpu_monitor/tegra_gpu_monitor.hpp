@@ -24,6 +24,8 @@
 #include <string>
 #include <vector>
 
+#ifdef _GPU_TEGRA_
+
 struct gpu_info
 {
   std::string label_;  //!< @brief gpu label
@@ -99,5 +101,7 @@ protected:
   std::vector<gpu_info> loads_;  //!< @brief GPU list for utilization
   std::vector<gpu_info> freqs_;  //!< @brief GPU list for frequency
 };
+
+#endif  // _GPU_TEGRA_
 
 #endif  // GPU_MONITOR__TEGRA_GPU_MONITOR_HPP_

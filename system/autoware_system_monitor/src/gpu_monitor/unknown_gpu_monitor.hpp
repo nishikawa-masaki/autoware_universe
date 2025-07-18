@@ -24,6 +24,8 @@
 
 #include <string>
 
+#if !defined(_GPU_NVML_) && !defined(_GPU_TEGRA_)
+
 class GPUMonitor : public GPUMonitorBase
 {
 public:
@@ -33,5 +35,7 @@ public:
    */
   explicit GPUMonitor(const rclcpp::NodeOptions & options);
 };
+
+#endif  // !defined(_GPU_NVML_) && !defined(_GPU_TEGRA_)
 
 #endif  // GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_

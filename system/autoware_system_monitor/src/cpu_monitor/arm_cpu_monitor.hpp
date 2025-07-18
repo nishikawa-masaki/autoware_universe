@@ -24,6 +24,8 @@
 
 #include <string>
 
+#ifdef _CPU_ARM_
+
 class CPUMonitor : public CPUMonitorBase
 {
 public:
@@ -60,5 +62,7 @@ protected:
   void updateThermalThrottlingImpl(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 };
+
+#endif  // _CPU_ARM_
 
 #endif  // CPU_MONITOR__ARM_CPU_MONITOR_HPP_

@@ -31,11 +31,13 @@ namespace fs = boost::filesystem;
 
 CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cpu_monitor", options)
 {
+  thermal_throttling_data_.clear();
 }
 
 CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
 : CPUMonitorBase(node_name, options)
 {
+  thermal_throttling_data_.clear();
 }
 
 void CPUMonitor::checkThermalThrottling()
