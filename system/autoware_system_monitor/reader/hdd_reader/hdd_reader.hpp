@@ -20,11 +20,11 @@
 #ifndef SYSTEM__AUTOWARE_SYSTEM_MONITOR__READER__HDD_READER__HDD_READER_HPP_
 #define SYSTEM__AUTOWARE_SYSTEM_MONITOR__READER__HDD_READER__HDD_READER_HPP_
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/string.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 #include <bitset>
 #include <map>
