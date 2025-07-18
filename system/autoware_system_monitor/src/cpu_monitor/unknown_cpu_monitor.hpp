@@ -43,6 +43,7 @@ public:
   CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options);
 };
 
-#endif  // !defined(_CPU_INTEL_) && !defined(_CPU_ARM_) && !defined(_CPU_TEGRA_) && !defined(_CPU_RASPI_)
+#endif  // !defined(_CPU_INTEL_) && !defined(_CPU_ARM_) && !defined(_CPU_TEGRA_) &&
+        // !defined(_CPU_RASPI_)
 
 #endif  // CPU_MONITOR__UNKNOWN_CPU_MONITOR_HPP_
