@@ -104,9 +104,13 @@ struct HddInfo
     ar & power_on_hours_;
     ar & total_data_written_;
     ar & recovered_error_;
+    // cppcheck-suppress bitwiseOnBoolean
     ar & is_valid_temp_;
+    // cppcheck-suppress bitwiseOnBoolean
     ar & is_valid_power_on_hours_;
+    // cppcheck-suppress bitwiseOnBoolean
     ar & is_valid_total_data_written_;
+    // cppcheck-suppress bitwiseOnBoolean
     ar & is_valid_recovered_error_;
   }
 };
