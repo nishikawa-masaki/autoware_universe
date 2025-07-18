@@ -18,8 +18,8 @@
  */
 
 #include "intel_cpu_monitor.hpp"
-#include "cpu_information.hpp"
 
+#include "cpu_information.hpp"
 #include "msr_reader/msr_reader.hpp"
 
 #include <boost/algorithm/string.hpp>

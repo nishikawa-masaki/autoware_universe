@@ -17,8 +17,8 @@
  * @brief NTP monitor class
  */
 
-#ifndef SYSTEM_MONITOR__NTP_MONITOR__NTP_MONITOR_HPP_
-#define SYSTEM_MONITOR__NTP_MONITOR__NTP_MONITOR_HPP_
+#ifndef NTP_MONITOR__NTP_MONITOR_HPP_
+#define NTP_MONITOR__NTP_MONITOR_HPP_
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -102,4 +102,4 @@ protected:
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "high"}, {DiagStatus::ERROR, "too high"}};
 };
 
-#endif  // SYSTEM_MONITOR__NTP_MONITOR__NTP_MONITOR_HPP_
+#endif  // NTP_MONITOR__NTP_MONITOR_HPP_

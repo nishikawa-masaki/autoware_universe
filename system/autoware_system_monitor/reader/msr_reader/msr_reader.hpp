@@ -17,8 +17,8 @@
  * @brief MSR reader definitions
  */
 
-#ifndef SYSTEM_MONITOR__MSR_READER__MSR_READER_HPP_
-#define SYSTEM_MONITOR__MSR_READER__MSR_READER_HPP_
+#ifndef SYSTEM__AUTOWARE_SYSTEM_MONITOR__READER__MSR_READER__MSR_READER_HPP_
+#define SYSTEM__AUTOWARE_SYSTEM_MONITOR__READER__MSR_READER__MSR_READER_HPP_
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/vector.hpp>
@@ -48,4 +48,4 @@ struct MSRInfo
   }
 };
 
-#endif  // SYSTEM_MONITOR__MSR_READER__MSR_READER_HPP_
+#endif  // SYSTEM__AUTOWARE_SYSTEM_MONITOR__READER__MSR_READER__MSR_READER_HPP_

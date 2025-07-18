@@ -17,8 +17,8 @@
  * @brief Unknown GPU monitor class
  */
 
-#ifndef SYSTEM_MONITOR__GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_
-#define SYSTEM_MONITOR__GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_
+#ifndef GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_
+#define GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_
 
 #include "gpu_monitor_base.hpp"
 
@@ -34,4 +34,4 @@ public:
   explicit GPUMonitor(const rclcpp::NodeOptions & options);
 };
 
-#endif  // SYSTEM_MONITOR__GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_
+#endif  // GPU_MONITOR__UNKNOWN_GPU_MONITOR_HPP_

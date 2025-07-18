@@ -17,8 +17,8 @@
  * @brief HDD monitor class
  */
 
-#ifndef SYSTEM_MONITOR__HDD_MONITOR__HDD_MONITOR_HPP_
-#define SYSTEM_MONITOR__HDD_MONITOR__HDD_MONITOR_HPP_
+#ifndef HDD_MONITOR__HDD_MONITOR_HPP_
+#define HDD_MONITOR__HDD_MONITOR_HPP_
 
 #include "hdd_reader/hdd_reader.hpp"
 
@@ -391,4 +391,4 @@ protected:
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "not connected"}, {DiagStatus::ERROR, "unused"}};
 };
 
-#endif  // SYSTEM_MONITOR__HDD_MONITOR__HDD_MONITOR_HPP_
+#endif  // HDD_MONITOR__HDD_MONITOR_HPP_

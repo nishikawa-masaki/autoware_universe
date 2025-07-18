@@ -17,8 +17,8 @@
  * @brief NVML GPU monitor class
  */
 
-#ifndef SYSTEM_MONITOR__GPU_MONITOR__NVML_GPU_MONITOR_HPP_
-#define SYSTEM_MONITOR__GPU_MONITOR__NVML_GPU_MONITOR_HPP_
+#ifndef GPU_MONITOR__NVML_GPU_MONITOR_HPP_
+#define GPU_MONITOR__NVML_GPU_MONITOR_HPP_
 
 #include "gpu_monitor_base.hpp"
 
@@ -157,4 +157,4 @@ protected:
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "unsupported clock"}};
 };
 
-#endif  // SYSTEM_MONITOR__GPU_MONITOR__NVML_GPU_MONITOR_HPP_
+#endif  // GPU_MONITOR__NVML_GPU_MONITOR_HPP_

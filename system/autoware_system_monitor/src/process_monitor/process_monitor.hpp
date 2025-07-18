@@ -17,8 +17,8 @@
  * @brief Process monitor class
  */
 
-#ifndef SYSTEM_MONITOR__PROCESS_MONITOR__PROCESS_MONITOR_HPP_
-#define SYSTEM_MONITOR__PROCESS_MONITOR__PROCESS_MONITOR_HPP_
+#ifndef PROCESS_MONITOR__PROCESS_MONITOR_HPP_
+#define PROCESS_MONITOR__PROCESS_MONITOR_HPP_
 
 #include "diag_task.hpp"
 
@@ -250,4 +250,4 @@ private:
   rclcpp::CallbackGroup::SharedPtr timer_callback_group_{};  //!< @brief Callback Group
 };
 
-#endif  // SYSTEM_MONITOR__PROCESS_MONITOR__PROCESS_MONITOR_HPP_
+#endif  // PROCESS_MONITOR__PROCESS_MONITOR_HPP_

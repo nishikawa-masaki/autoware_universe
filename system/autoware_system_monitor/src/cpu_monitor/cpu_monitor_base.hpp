@@ -17,8 +17,8 @@
  * @brief CPU monitor base class
  */
 
-#ifndef SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_
-#define SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_
+#ifndef CPU_MONITOR__CPU_MONITOR_BASE_HPP_
+#define CPU_MONITOR__CPU_MONITOR_BASE_HPP_
 
 #include "cpu_information.hpp"
 #include "cpu_usage_statistics.hpp"
@@ -241,4 +241,4 @@ private:
   std::atomic<bool> is_frequency_file_names_initialized_;
 };
 
-#endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_
+#endif  // CPU_MONITOR__CPU_MONITOR_BASE_HPP_

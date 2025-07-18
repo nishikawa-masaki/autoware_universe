@@ -17,8 +17,8 @@
  * @brief information about CPUs/cores
  */
 
-#ifndef SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
-#define SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
+#ifndef CPU_MONITOR__CPU_INFORMATION_HPP_
+#define CPU_MONITOR__CPU_INFORMATION_HPP_
 
 #include <string>
 #include <vector>
@@ -148,4 +148,4 @@ struct FrequencyData
     core_data.clear();  // Allocated heap memory is not released.
   }
 };
-#endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_INFORMATION_HPP_
+#endif  // CPU_MONITOR__CPU_INFORMATION_HPP_

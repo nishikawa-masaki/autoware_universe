@@ -17,8 +17,8 @@
  * @brief GPU monitor class
  */
 
-#ifndef SYSTEM_MONITOR__GPU_MONITOR__GPU_MONITOR_BASE_HPP_
-#define SYSTEM_MONITOR__GPU_MONITOR__GPU_MONITOR_BASE_HPP_
+#ifndef GPU_MONITOR__GPU_MONITOR_BASE_HPP_
+#define GPU_MONITOR__GPU_MONITOR_BASE_HPP_
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -126,4 +126,4 @@ protected:
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "unused"}, {DiagStatus::ERROR, "throttling"}};
 };
 
-#endif  // SYSTEM_MONITOR__GPU_MONITOR__GPU_MONITOR_BASE_HPP_
+#endif  // GPU_MONITOR__GPU_MONITOR_BASE_HPP_

@@ -17,8 +17,8 @@
  * @brief  voltage monitor class
  */
 
-#ifndef SYSTEM_MONITOR__VOLTAGE_MONITOR__VOLTAGE_MONITOR_HPP_
-#define SYSTEM_MONITOR__VOLTAGE_MONITOR__VOLTAGE_MONITOR_HPP_
+#ifndef VOLTAGE_MONITOR__VOLTAGE_MONITOR_HPP_
+#define VOLTAGE_MONITOR__VOLTAGE_MONITOR_HPP_
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -69,4 +69,4 @@ protected:
   std::regex voltage_regex_;
 };
 
-#endif  // SYSTEM_MONITOR__VOLTAGE_MONITOR__VOLTAGE_MONITOR_HPP_
+#endif  // VOLTAGE_MONITOR__VOLTAGE_MONITOR_HPP_
