@@ -14185,21 +14185,29 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <span class="nt">input/detection01/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/lidar_centerpoint/objects</span>
 <span class="nt">input/detection01/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lidar_centerpoint</span>
 
+<span class="c1"># lidar short_range centerpoint</span>
+<span class="nt">input/detection02/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/centerpoint_short_range/objects</span>
+<span class="nt">input/detection02/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lidar_centerpoint_short_range</span>
+
 <span class="c1"># camera lidar fusion</span>
-<span class="nt">input/detection02/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/clustering/camera_lidar_fusion/objects</span>
-<span class="nt">input/detection02/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera_lidar_fusion</span>
+<span class="nt">input/detection03/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/clustering/camera_lidar_fusion/objects</span>
+<span class="nt">input/detection03/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera_lidar_fusion</span>
+
+<span class="c1"># camera lidar fusion based irregular object detection</span>
+<span class="nt">input/detection04/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/irregular_object/objects</span>
+<span class="nt">input/detection04/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera_lidar_fusion_irregular</span>
 
 <span class="c1"># detection by tracker</span>
-<span class="nt">input/detection03/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/detection_by_tracker/objects</span>
-<span class="nt">input/detection03/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">detection_by_tracker</span>
+<span class="nt">input/detection05/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/detection_by_tracker/objects</span>
+<span class="nt">input/detection05/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">detection_by_tracker</span>
 
 <span class="c1"># radar</span>
-<span class="nt">input/detection04/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/radar/objects</span>
-<span class="nt">input/detection04/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">radar</span>
+<span class="nt">input/detection06/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/perception/object_recognition/detection/radar/objects</span>
+<span class="nt">input/detection06/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">radar</span>
 
 <span class="c1"># disable</span>
-<span class="nt">input/detection05/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input/objects05</span>
-<span class="nt">input/detection05/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">none</span><span class="w"> </span><span class="c1"># Disabled</span>
+<span class="nt">input/detection07/objects</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input/objects07</span>
+<span class="nt">input/detection07/channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">none</span><span class="w"> </span><span class="c1"># Disabled</span>
 </code></pre></div>
 <p>Up to 12 detection inputs can be configured (detection01 through detection12). Each input consists of an objects topic and its corresponding channel configuration.</p>
 <h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
@@ -14418,62 +14426,6 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>N/A</td>
 </tr>
 <tr>
-<td>confident_count_threshold.UNKNOWN</td>
-<td>float</td>
-<td>Number of measurements to consider tracker as confident for unknown object classes.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>confident_count_threshold.CAR</td>
-<td>float</td>
-<td>Number of measurements to consider tracker as confident for car object classes.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>confident_count_threshold.TRUCK</td>
-<td>float</td>
-<td>Number of measurements to consider tracker as confident for truck object classes.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>confident_count_threshold.BUS</td>
-<td>float</td>
-<td>Number of measurements to consider tracker as confident for bus object classes.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>confident_count_threshold.TRAILER</td>
-<td>float</td>
-<td>Number of measurements to consider tracker as confident for trailer object classes.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>confident_count_threshold.MOTORBIKE</td>
-<td>float</td>
-<td>Number of measurements to consider tracker as confident for motorbike object classes.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>confident_count_threshold.BICYCLE</td>
-<td>float</td>
-<td>Number of measurements to consider tracker as confident for bicycle object classes.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>confident_count_threshold.PEDESTRIAN</td>
-<td>float</td>
-<td>Number of measurements to consider tracker as confident for pedestrian object classes.</td>
-<td>3</td>
-<td>N/A</td>
-</tr>
-<tr>
 <td>generalized_iou_thresholds</td>
 <td>array</td>
 <td>Generalized IoU threshold for each class.</td>
@@ -14577,7 +14529,7 @@ For big vehicles such as trucks and buses, we have separate models for passenger
 <td>max_area_matrix</td>
 <td>array</td>
 <td>Maximum area table for data association.</td>
-<td>[100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 12.1, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0, 36.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0, 60.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0, 60.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0, 2.5, 10000.0, 10000.0, 10000.0, 10000.0, 2.5, 2.5, 1.0, 2.5, 10000.0, 10000.0, 10000.0, 10000.0, 2.5, 2.5, 1.0, 2.0, 10000.0, 10000.0, 10000.0, 10000.0, 1.5, 1.5, 1.0]</td>
+<td>[100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 12.1, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0, 36.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0, 60.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0, 60.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0, 2.5, 10000.0, 10000.0, 10000.0, 10000.0, 2.5, 2.5, 2.5, 2.5, 10000.0, 10000.0, 10000.0, 10000.0, 2.5, 2.5, 2.5, 2.0, 10000.0, 10000.0, 10000.0, 10000.0, 2.0, 2.0, 2.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
