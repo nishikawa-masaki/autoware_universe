@@ -129,7 +129,7 @@ struct NodeParam
         get_or_declare_parameter<double>(node, footprint_envelop_ns + "lat_m");
       normal_config.footprint_envelop.lon_m =
         get_or_declare_parameter<double>(node, footprint_envelop_ns + "lon_m");
-      configs.insert({AbnormalityType::NORMAL, normal_config});
+      configs.emplace(AbnormalityType::NORMAL, normal_config);
 
       const auto get_steer_params = [&](const auto steer_abnormality_type, const auto & ns) {
         const auto compensate_steering = get_or_declare_parameter<bool>(node, ns + "enable");
@@ -144,7 +144,7 @@ struct NodeParam
         steering_config.delay_s = get_or_declare_parameter<double>(node, ns + "delay_s");
         steering_config.offset_rps = get_or_declare_parameter<double>(node, ns + "offset_rps");
         steering_config.factor = get_or_declare_parameter<double>(node, ns + "factor");
-        configs.insert({steer_abnormality_type, steering_config});
+        configs.emplace(steer_abnormality_type, steering_config);
       };
       const std::string ns_steering_abnormality_accelerated{
         ns_abnormality + "steering_accelerated."};
@@ -169,7 +169,7 @@ struct NodeParam
         get_or_declare_parameter<double>(node, localization_footprint_envelop_ns + "lat_m");
       localization_config.footprint_envelop.lon_m =
         get_or_declare_parameter<double>(node, localization_footprint_envelop_ns + "lon_m");
-      configs.insert({AbnormalityType::LOCALIZATION, localization_config});
+      configs.emplace(AbnormalityType::LOCALIZATION, localization_config);
 
       if (compensate_longitudinal) {
         abnormality_types_to_compensate.emplace_back(AbnormalityType::LONGITUDINAL);
@@ -180,7 +180,7 @@ struct NodeParam
         get_or_declare_parameter<double>(node, lon_tracking_ns + "scale");
       longitudinal_config.lon_tracking.extra_margin_m =
         get_or_declare_parameter<double>(node, lon_tracking_ns + "extra_margin_m");
-      configs.insert({AbnormalityType::LONGITUDINAL, longitudinal_config});
+      configs.emplace(AbnormalityType::LONGITUDINAL, longitudinal_config);
 
       bdc_param.abnormality_types_to_compensate = abnormality_types_to_compensate;
       bdc_param.abnormality_configs = configs;
@@ -213,10 +213,10 @@ struct NodeParam
       const auto critical_departure_diag_lvl =
         select_diag_lvl(get_or_declare_parameter<int>(node, ns_diag + "critical_departure"));
 
-      diag.insert({DepartureType::NONE, DiagStatus::OK});
-      diag.insert({DepartureType::NEAR_BOUNDARY, near_boundary_diag_lvl});
-      diag.insert({DepartureType::APPROACHING_DEPARTURE, approaching_departure_diag_lvl});
-      diag.insert({DepartureType::CRITICAL_DEPARTURE, critical_departure_diag_lvl});
+      diag.emplace(DepartureType::NONE, DiagStatus::OK);
+      diag.emplace(DepartureType::NEAR_BOUNDARY, near_boundary_diag_lvl);
+      diag.emplace(DepartureType::APPROACHING_DEPARTURE, approaching_departure_diag_lvl);
+      diag.emplace(DepartureType::CRITICAL_DEPARTURE, critical_departure_diag_lvl);
       return diag;
     });
 
