@@ -46,6 +46,14 @@ const std::size_t POINT_DIM_XYZIT = 5;  // X, Y, Z, Intensity, Time_lag
 const std::size_t ENCODER_NUM_FEATURES_9 = 9;
 const std::size_t ENCODER_NUM_FEATURES_10 = 10;
 const std::size_t ENCODER_NUM_FEATURES_11 = 11;
+
+__device__ __forceinline__ float load_streaming(const float* ptr) {
+    float val;
+    // .cs (Cache Streaming) 修飾子を付けて読み込む
+    asm volatile("ld.global.cs.f32 %0, [%1];" : "=f"(val) : "l"(ptr));
+    return val;
+}
+
 }  // namespace
 
 namespace autoware::lidar_centerpoint
@@ -61,12 +69,18 @@ __global__ void generateSweepPoints_kernel(
   const float * transform_array, float * __restrict__ output_points)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (point_idx >= points_size) return;
+  if (point_idx >= points_size) {
+    return;
+  }
 
   const InputPointType * input_point = &input_points[point_idx];
-  float input_x = input_point->x;
-  float input_y = input_point->y;
-  float input_z = input_point->z;
+//  float input_x = input_point->x;
+//  float input_y = input_point->y;
+//  float input_z = input_point->z;
+  // After these lines, "input_point" may be evicted from the cache.
+  float input_x = load_streaming(&(input_point->x));
+  float input_y = load_streaming(&(input_point->y));
+  float input_z = load_streaming(&(input_point->z));
 
   output_points[point_idx * POINT_NUM_FEATURES] =
     transform_array[0] * input_x + transform_array[4] * input_y + transform_array[8] * input_z +
