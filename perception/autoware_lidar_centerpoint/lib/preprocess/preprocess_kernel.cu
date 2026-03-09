@@ -46,13 +46,6 @@ const std::size_t POINT_DIM_XYZIT = 5;  // X, Y, Z, Intensity, Time_lag
 const std::size_t ENCODER_NUM_FEATURES_9 = 9;
 const std::size_t ENCODER_NUM_FEATURES_10 = 10;
 const std::size_t ENCODER_NUM_FEATURES_11 = 11;
-
-__device__ __forceinline__ float load_streaming(const float* ptr) {
-    float val;
-    // .cs (Cache Streaming) 修飾子を付けて読み込む
-    asm volatile("ld.global.cs.f32 %0, [%1];" : "=f"(val) : "l"(ptr));
-    return val;
-}
 }  // namespace
 
 namespace autoware::lidar_centerpoint
@@ -71,13 +64,9 @@ __global__ void generateSweepPoints_kernel(
   if (point_idx >= points_size) return;
 
   const InputPointType * input_point = &input_points[point_idx];
-//  float input_x = input_point->x;
-//  float input_y = input_point->y;
-//  float input_z = input_point->z;
-  // After these lines, "input_point" will be evicted from the cache.
-  float input_x = load_streaming(&(input_point->x));
-  float input_y = load_streaming(&(input_point->y));
-  float input_z = load_streaming(&(input_point->z));
+  float input_x = input_point->x;
+  float input_y = input_point->y;
+  float input_z = input_point->z;
 
   output_points[point_idx * POINT_NUM_FEATURES] =
     transform_array[0] * input_x + transform_array[4] * input_y + transform_array[8] * input_z +
@@ -100,14 +89,6 @@ __global__ void generateSweepPoints_kernel(
   }
 }
 
-// テンプレートにする意味は？
-// コードサイズは変わらない（２種類できる）
-// メンテナンス性はちょっと良い？
-// 不要な if 文（でも、同じ分岐をするからペナルティ無し？）
-// 処理が単純でカーネルに投げるよりオーバーヘッドが大きくないか？
-// 結果を global memory に書いて次に渡している。
-// shared_memory を使ったら？
-// generateVoxels_random_kernel() と合体させたら？
 template <std::size_t POINT_NUM_FEATURES>
 __global__ void shufflePoints_kernel(
   const float * points, const unsigned int * indices, float * shuffled_points,
@@ -119,9 +100,6 @@ __global__ void shufflePoints_kernel(
   int src_idx = indices[(point_idx + offset) % max_size];
   int dst_idx = point_idx;
 
-  // shared_memory 使ったほうが良くない？ OK
-  // __syncthreads() しなくて良いのか？ OK
-  // if 文深い
   if (dst_idx >= points_size) {
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 0] = INFINITY;
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 1] = INFINITY;
@@ -141,14 +119,6 @@ __global__ void shufflePoints_kernel(
   }
 }
 
-// テンプレートにする意味は？
-// コードサイズは変わらない（２種類できる）
-// メンテナンス性はちょっと良い？
-// 不要な if 文（でも、同じ分岐をするからペナルティ無し？）
-// 処理が単純でカーネルに投げるよりオーバーヘッドが大きくないか？
-// 結果を global memory に書いて次に渡している。
-// shared_memory を使ったら？
-// shufflePoints_kernel() と合体させたら？
 template <std::size_t POINT_NUM_FEATURES>
 __global__ void generateVoxels_random_kernel(
   const float * points, std::size_t points_size, float min_x_range, float max_x_range,
@@ -448,10 +418,8 @@ cudaError_t PreprocessCuda::generateVoxels_random_launch(
   return err;
 }
 
-// thread の数が違うので、これまでの処理と一気通貫はできなそう。
 // create 4 channels
 cudaError_t PreprocessCuda::generateBaseFeatures_launch(
-  // mask と voxels は const にすべきでは？
   unsigned int * mask, float * voxels, unsigned int * pillar_num, float * voxel_features,
   float * voxel_num, int * voxel_idxs)
 {
@@ -476,7 +444,6 @@ cudaError_t PreprocessCuda::generateBaseFeatures_launch(
   return err;
 }
 
-// thread の数が違うので、これまでの処理と一気通貫はできなそう。
 // cspell: ignore divup
 cudaError_t PreprocessCuda::generateFeatures_launch(
   const float * voxel_features, const float * voxel_num_points, const int * coords,

@@ -175,7 +175,6 @@ void CenterPointTRT::initTrt(
   }
 }
 
-// input_pointcloud_msg_ptr が指す先は確定している必要がある？
 bool CenterPointTRT::detect(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg_ptr,
   const tf2_ros::Buffer & tf_buffer, std::vector<Box3D> & det_boxes3d,
@@ -183,16 +182,14 @@ bool CenterPointTRT::detect(
 {
   is_num_pillars_within_range = true;
 
-  // 結果を受け取る配列をゼロ・クリアしているだけ
-  // 本当にクリアする必要がある？
   CHECK_CUDA_ERROR(cudaMemsetAsync(
     encoder_in_features_d_.get(), 0, encoder_in_feature_size_ * sizeof(float), stream_));
   CHECK_CUDA_ERROR(
     cudaMemsetAsync(spatial_features_d_.get(), 0, spatial_features_size_ * sizeof(float), stream_));
   // For safety, wait for completion of memory setting.
-  // encoder_in_features_d_ is referenced in preprocess(). <- 結果が書かれるだけ
-  // spatial_features_d_ is referenced in inference(). <- 結果が書かれるだけ
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));  // 要らないんじゃないか？
+  // encoder_in_features_d_ is referenced in preprocess().
+  // spatial_features_d_ is referenced in inference().
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // No need for synchronization here.
 
@@ -235,25 +232,17 @@ bool CenterPointTRT::detect(
   return true;
 }
 
-// input_pointcloud_msg_ptr が指す先のデータが確定している必要があるかどうか判りにくい。
-// stream で処理するのか？
-// そのデータを CPU 側で使うのか？
-// 結局、確定しないとまずいみたい
 bool CenterPointTRT::preprocess(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg_ptr,
   const tf2_ros::Buffer & tf_buffer)
 {
   using autoware::cuda_utils::clear_async;
 
-  // VoxelGenerator を経由して PointCloudDensification に食わせる。
-  // ここは stream 関係しない。
-  // header の frame_id, stamp が必要なので、確定していないとまずいはず。
   bool is_success = vg_ptr_->enqueuePointCloud(input_pointcloud_msg_ptr, tf_buffer);
   if (!is_success) {
     return false;
   }
 
-  // stream_ で処理するので、このあとは input_pointcloud_msg_ptr の先は確定している。
   clear_async(num_voxels_d_.get(), 1, stream_);
   clear_async(voxels_buffer_d_.get(), voxels_buffer_size_, stream_);
   clear_async(mask_d_.get(), mask_size_, stream_);
@@ -263,31 +252,25 @@ bool CenterPointTRT::preprocess(
   // No synchronization needed.
   // CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
-  // Executed asynchronously on stream_.
+  // Executed in stream_
   const std::size_t count = vg_ptr_->generateSweepPoints(points_aux_d_.get());
-  // No need to wait for finish of the launced kernel
-  // because "count" doesn't depend on it.
-
   const std::size_t random_offset = std::rand() % config_.cloud_capacity_;
 
-  // Executed asynchronously on stream_.
-  // "shufflePoints_kernel" will be executed after the preceding requests on the stream.
+  // Executed in stream_
   pre_proc_ptr_->shufflePoints_launch(
     points_aux_d_.get(), shuffle_indices_d_.get(), points_d_.get(), count, config_.cloud_capacity_,
     random_offset);
 
-  // Executed asynchronously on stream_.
+  // Executed in stream_
   pre_proc_ptr_->generateVoxels_random_launch(
     points_d_.get(), config_.cloud_capacity_, mask_d_.get(), voxels_buffer_d_.get());
 
-  // Executed asynchronously on stream_.
+  // Executed in stream_
   pre_proc_ptr_->generateBaseFeatures_launch(
     mask_d_.get(), voxels_buffer_d_.get(), num_voxels_d_.get(), voxels_d_.get(),
     num_points_per_voxel_d_.get(), coordinates_d_.get());
 
-  // 値がすべてポインタ渡しなので、同一ストリームでの async 実行は問題ない。
-
-  // Executed asynchronously on stream_.
+  // Executed in stream_
   pre_proc_ptr_->generateFeatures_launch(
     voxels_d_.get(), num_points_per_voxel_d_.get(), coordinates_d_.get(), num_voxels_d_.get(),
     encoder_in_features_d_.get());
@@ -305,7 +288,6 @@ void CenterPointTRT::inference()
   encoder_trt_ptr_->setTensorsAddresses(encoder_tensors);
   encoder_trt_ptr_->enqueueV3(stream_);
 
-  // spatial_features_d_ は結果を受け取る出力パラメータ
   // scatter
   CHECK_CUDA_ERROR(scatterFeatures_launch(
     pillar_features_d_.get(), coordinates_d_.get(), num_voxels_d_.get(), config_.max_voxel_size_,
