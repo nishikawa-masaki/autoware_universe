@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -22940,7 +22940,7 @@
 <h2 id="how-to-use">How to use<a class="headerlink" href="#how-to-use" title="Permanent link">#</a></h2>
 <h3 id="1-prerequisites">(1) Prerequisites<a class="headerlink" href="#1-prerequisites" title="Permanent link">#</a></h3>
 <p>Make sure that the directory specified in <code>planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml</code> points to the correct model version and contains the required model weight and parameter files.</p>
-<div class="highlight"><pre><span></span><code>$<span class="w"> </span>ls<span class="w"> </span>~/autoware_data/diffusion_planner/v3.0/
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>ls<span class="w"> </span>~/autoware_data/diffusion_planner/v3.1/
 diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 </code></pre></div>
 <p>This can be downloaded from <a href="https://github.com/autowarefoundation/autoware/blob/main/setup-dev-env.sh">setup-dev-env.sh</a>.</p>
@@ -23143,13 +23143,6 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>N/A</td>
 </tr>
 <tr>
-<td>predict_neighbor_trajectory</td>
-<td>boolean</td>
-<td>Predict trajectories for neighbor agents</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
 <td>traffic_light_group_msg_timeout_seconds</td>
 <td>float</td>
 <td>Timeout for traffic light group messages (seconds)</td>
@@ -23209,6 +23202,13 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>shift_x</td>
 <td>boolean</td>
 <td>Whether to shift the ego center position by half the wheel base</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_time_interpolation</td>
+<td>boolean</td>
+<td>Whether to interpolate ego past trajectory at regular time intervals</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
@@ -23384,6 +23384,12 @@ The model version is defined either by the directory name provided to the node o
 <td><strong>3.0</strong></td>
 <td>2026/01/09</td>
 <td>- Added <code>TURN_INDICATOR_OUTPUT_KEEP</code> to allow the model to focus on the timing of status change. <br>- Conducted Supervised Fine-Tuning (SFT) with carefully filtered data. <br>- Increased the encoder layers from 3 to 6.</td>
+<td>OK</td>
+</tr>
+<tr>
+<td><strong>3.1</strong></td>
+<td>2026/03/05</td>
+<td>- ONNX simplified model for faster TRT engine build and reduced GPU memory. <br>- Same weights as v3.0 (no retraining).</td>
 <td>OK</td>
 </tr>
 </tbody>

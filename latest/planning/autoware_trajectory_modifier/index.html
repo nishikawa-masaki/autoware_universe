@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -22808,6 +22808,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stop-point-fixer_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stop Point Fixer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -22861,12 +22878,12 @@
 </ul>
 <h3 id="current-plugins">Current Plugins<a class="headerlink" href="#current-plugins" title="Permanent link">#</a></h3>
 <h4 id="stop-point-fixer">Stop Point Fixer<a class="headerlink" href="#stop-point-fixer" title="Permanent link">#</a></h4>
-<p>The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by:</p>
+<p>The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by replacing the trajectory with a single stop point when either of two independently configurable conditions is met:</p>
 <ul>
-<li>Monitoring ego vehicle velocity and trajectory distance</li>
-<li>Replacing the trajectory with a single stop point when conditions are met</li>
-<li>Ensuring smooth operation during stationary periods</li>
+<li><strong>Close stop</strong>: the trajectory's last point (stop point) is within a minimum distance threshold from ego</li>
+<li><strong>Long stop</strong>: the trajectory commands ego to remain stopped for longer than a minimum duration threshold</li>
 </ul>
+<p>Both conditions are individually enabled or disabled via parameters, allowing fine-grained control over when the override is applied.</p>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h2>
 <p>This package depends on the following packages:</p>
 <ul>
@@ -22883,10 +22900,51 @@
 </ul>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <ul>
-<li><code>use_stop_point_fixer</code>: Enable the stop point fixer modifier plugin (default: true)</li>
-<li><code>stop_point_fixer.velocity_threshold_mps</code>: Velocity threshold below which ego vehicle is considered stationary (default: 0.1 m/s)</li>
-<li><code>stop_point_fixer.min_distance_threshold_m</code>: Minimum distance threshold to trigger trajectory replacement (default: 1.0 m)</li>
+<li><code>use_stop_point_fixer</code>: Enable the stop point fixer modifier plugin (default: <code>true</code>)</li>
 </ul>
+<h3 id="stop-point-fixer_1">Stop Point Fixer<a class="headerlink" href="#stop-point-fixer_1" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stop_point_fixer.force_stop_close_stopped_trajectories</code></td>
+<td>bool</td>
+<td><code>true</code></td>
+<td>Force zero-velocity trajectory when the stop point is within <code>min_distance_threshold_m</code> of ego</td>
+</tr>
+<tr>
+<td><code>stop_point_fixer.force_stop_long_stopped_trajectories</code></td>
+<td>bool</td>
+<td><code>true</code></td>
+<td>Force zero-velocity trajectory when the trajectory commands a stop longer than <code>min_stop_duration_s</code></td>
+</tr>
+<tr>
+<td><code>stop_point_fixer.velocity_threshold_mps</code></td>
+<td>double</td>
+<td><code>0.25</code></td>
+<td>Velocity threshold (m/s) below which ego is considered stationary</td>
+</tr>
+<tr>
+<td><code>stop_point_fixer.min_distance_threshold_m</code></td>
+<td>double</td>
+<td><code>1.0</code></td>
+<td>Distance threshold (m) for the close-stop condition</td>
+</tr>
+<tr>
+<td><code>stop_point_fixer.min_stop_duration_s</code></td>
+<td>double</td>
+<td><code>0.5</code></td>
+<td>Minimum stop duration (s) for the long-stop condition</td>
+</tr>
+</tbody>
+</table>
 <p>Parameters can be set via YAML configuration files in the <code>config/</code> directory.</p>
 <h2 id="adding-new-modifier-plugins">Adding New Modifier Plugins<a class="headerlink" href="#adding-new-modifier-plugins" title="Permanent link">#</a></h2>
 <p>To add a new modifier plugin:</p>
