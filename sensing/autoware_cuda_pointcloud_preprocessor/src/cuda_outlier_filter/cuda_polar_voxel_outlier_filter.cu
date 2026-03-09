@@ -476,6 +476,9 @@ __global__ void copy_valid_points_kernel(
   bool is_valid = valid_points_mask[point_index];
   int destination_index = filtered_indices[point_index];
 
+  // thread ごとに memcpy() を呼ぶのは得策か？
+  // step が小さい場合は無駄になる。
+  // coalesced access や cuda::memcpy_async() を使うことを検討。
   if (is_valid) {
     memcpy(output_points + destination_index * step, input_cloud + point_index * step, step);
   }
