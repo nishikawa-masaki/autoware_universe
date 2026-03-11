@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
     
     
       
@@ -23061,6 +23061,13 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles.</td>
 <td>0.7</td>
 <td>≥0.1<br>≤2.0</td>
+</tr>
+<tr>
+<td>trajectory_kinematic_feasibility.time_step_s</td>
+<td>float</td>
+<td>Time step for kinematic feasibility enforcement [s]. Default: 0.1 s.</td>
+<td>0.1</td>
+<td>≥0.01<br>≤1.0</td>
 </tr>
 <tr>
 <td>trajectory_mpt_optimizer.corridor_width_m</td>
