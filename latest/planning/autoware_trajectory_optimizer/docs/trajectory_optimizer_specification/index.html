@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
     
     
       
@@ -22998,10 +22998,9 @@ matching (<code>preserve_input_trajectory_orientation</code>), but this is <stro
 and invalidates the curvature penalty scaling.</p>
 <h4 id="trajectorysplinesmoother-enabled">TrajectorySplineSmoother (enabled)<a class="headerlink" href="#trajectorysplinesmoother-enabled" title="Permanent link">#</a></h4>
 <p>Resamples the trajectory using Akima spline interpolation at a fixed arc-length resolution
-(<code>interpolation_resolution_m</code>, default: 0.2 m). After resampling, <code>time_from_start</code> is
-recomputed from the velocity profile and arc length via <code>calculate_time_from_start</code>.
+(<code>interpolation_resolution_m</code>, default: 0.2 m).
 <code>preserve_input_trajectory_orientation</code> is available but <strong>disabled by default</strong>; orientations
-are computed from the spline geometry.</p>
+are computed from the spline geometry. After resampling, <code>time_from_start</code> is recomputed for all trajectory points; any <code>time_from_start</code> values supplied by upstream modules are therefore overwritten.</p>
 <p>This plugin <strong>breaks the constant-dt property</strong>. After it runs, points are no longer at uniform
 time intervals - they are at uniform arc-length intervals. This is intentional and necessary:
 the downstream controller requires points that are not too close in space, regardless of velocity.
@@ -23015,8 +23014,7 @@ the smoothers. It does not modify positions.</p>
 <ul>
 <li><strong>Speed cap</strong> (<code>limit_speed</code>, enabled by default): applies a global maximum speed from an
   external velocity limit topic or the configured default.</li>
-<li><strong>Lateral acceleration limiting</strong> (<code>limit_lateral_acceleration</code>, disabled by default): first
-  calls <code>calculate_time_from_start</code> to refresh timing, then for each consecutive point pair
+<li><strong>Lateral acceleration limiting</strong> (<code>limit_lateral_acceleration</code>, disabled by default): for each consecutive point pair, it
   computes <code>yaw_rate = |delta_yaw / delta_time|</code> from orientation differences and
   <code>time_from_start</code>. If <code>v * yaw_rate &gt; a_lat_max</code>, the point's speed is capped to
   <code>v_limit = a_lat_max / yaw_rate</code>.</li>
