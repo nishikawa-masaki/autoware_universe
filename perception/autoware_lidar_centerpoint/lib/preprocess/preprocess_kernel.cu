@@ -103,6 +103,14 @@ __global__ void generateSweepPoints_kernel(
   }
 }
 
+// テンプレートにする意味は？
+// コードサイズは変わらない（２種類できる）
+// メンテナンス性はちょっと良い？
+// 不要な if 文（でも、同じ分岐をするからペナルティ無し？）
+// 処理が単純でカーネルに投げるよりオーバーヘッドが大きくないか？
+// 結果を global memory に書いて次に渡している。
+// shared_memory を使ったら？
+// generateVoxels_random_kernel() と合体させたら？
 template <std::size_t POINT_NUM_FEATURES>
 __global__ void shufflePoints_kernel(
   const float * points, const unsigned int * indices, float * shuffled_points,
@@ -114,6 +122,9 @@ __global__ void shufflePoints_kernel(
   int src_idx = indices[(point_idx + offset) % max_size];
   int dst_idx = point_idx;
 
+  // shared_memory 使ったほうが良くない？ OK
+  // __syncthreads() しなくて良いのか？ OK
+  // if 文深い
   if (dst_idx >= points_size) {
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 0] = INFINITY;
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 1] = INFINITY;
@@ -133,6 +144,14 @@ __global__ void shufflePoints_kernel(
   }
 }
 
+// テンプレートにする意味は？
+// コードサイズは変わらない（２種類できる）
+// メンテナンス性はちょっと良い？
+// 不要な if 文（でも、同じ分岐をするからペナルティ無し？）
+// 処理が単純でカーネルに投げるよりオーバーヘッドが大きくないか？
+// 結果を global memory に書いて次に渡している。
+// shared_memory を使ったら？
+// shufflePoints_kernel() と合体させたら？
 template <std::size_t POINT_NUM_FEATURES>
 __global__ void generateVoxels_random_kernel(
   const float * points, std::size_t points_size, float min_x_range, float max_x_range,
@@ -432,8 +451,10 @@ cudaError_t PreprocessCuda::generateVoxels_random_launch(
   return err;
 }
 
+// thread の数が違うので、これまでの処理と一気通貫はできなそう。
 // create 4 channels
 cudaError_t PreprocessCuda::generateBaseFeatures_launch(
+  // mask と voxels は const にすべきでは？
   unsigned int * mask, float * voxels, unsigned int * pillar_num, float * voxel_features,
   float * voxel_num, int * voxel_idxs)
 {
@@ -458,6 +479,7 @@ cudaError_t PreprocessCuda::generateBaseFeatures_launch(
   return err;
 }
 
+// thread の数が違うので、これまでの処理と一気通貫はできなそう。
 // cspell: ignore divup
 cudaError_t PreprocessCuda::generateFeatures_launch(
   const float * voxel_features, const float * voxel_num_points, const int * coords,

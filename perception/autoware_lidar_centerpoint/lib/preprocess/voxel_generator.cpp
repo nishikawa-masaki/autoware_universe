@@ -86,12 +86,14 @@ std::size_t VoxelGenerator::generateSweepPoints(float * points_d)
     // because the next CUDA kernel will be launched on stream_.
     // CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
-    // Executed in stream_
+    // Executed asynchronously on stream_.
     pre_ptr_->generateSweepPoints_launch(
       reinterpret_cast<InputPointType *>(input_pointcloud_msg_ptr->data.get()), sweep_num_points,
       time_lag, affine_past2current_d_.get(), points_d + output_offset);
 
     // Execution may not have completed.
+    // No need to wait for finish of the launced kernel
+    // because point_counter doesn't depend on it.
     point_counter += sweep_num_points;
   }
   return point_counter;
