@@ -39,7 +39,6 @@
 namespace
 {
 const std::size_t MAX_POINT_IN_VOXEL_SIZE = 32;  // the same as max_point_in_voxel_size_ in config
-// Why 4 is good?
 const std::size_t WARPS_PER_BLOCK = 4;
 
 const std::size_t POINT_DIM_XYZT = 4;   // X, Y, Z, Time_lag
@@ -115,7 +114,6 @@ __global__ void shufflePoints_kernel(
   int src_idx = indices[(point_idx + offset) % max_size];
   int dst_idx = point_idx;
 
-  // float4 型を使えないか？
   if (dst_idx >= points_size) {
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 0] = INFINITY;
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 1] = INFINITY;
@@ -125,7 +123,6 @@ __global__ void shufflePoints_kernel(
       shuffled_points[POINT_NUM_FEATURES * dst_idx + 4] = INFINITY;
     }
   } else {
-#if 0
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 0] = points[POINT_NUM_FEATURES * src_idx + 0];
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 1] = points[POINT_NUM_FEATURES * src_idx + 1];
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 2] = points[POINT_NUM_FEATURES * src_idx + 2];
@@ -133,17 +130,6 @@ __global__ void shufflePoints_kernel(
     if (POINT_NUM_FEATURES == POINT_DIM_XYZIT) {
       shuffled_points[POINT_NUM_FEATURES * dst_idx + 4] = points[POINT_NUM_FEATURES * src_idx + 4];
     }
-#else
-    const float* src_ptr = points + (POINT_NUM_FEATURES * src_idx);
-    float* dst_ptr = shuffled_points + (POINT_NUM_FEATURES * dst_idx);
-    *(dst_ptr++) = load_streaming(src_ptr++);  // 0
-    *(dst_ptr++) = load_streaming(src_ptr++);  // 1
-    *(dst_ptr++) = load_streaming(src_ptr++);  // 2
-    *(dst_ptr++) = load_streaming(src_ptr++);  // 3
-    if (POINT_NUM_FEATURES == POINT_DIM_XYZIT) {
-      *(dst_ptr++) = load_streaming(src_ptr++);  // 4
-    }
-#endif  // 0
   }
 }
 
@@ -156,17 +142,9 @@ __global__ void generateVoxels_random_kernel(
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= points_size) return;
 
-  // float3 をつかったら？
-#if 0
   const float x = points[point_idx * POINT_NUM_FEATURES];
   const float y = points[point_idx * POINT_NUM_FEATURES + 1];
   const float z = points[point_idx * POINT_NUM_FEATURES + 2];
-#else  // 0
-  const float* src_ptr = points + (point_idx * POINT_NUM_FEATURES);
-  const float x = load_streaming(src_ptr++);  // 0
-  const float y = load_streaming(src_ptr++);  // 1
-  const float z = load_streaming(src_ptr++);  // 2
-#endif  // 0
 
   if (
     x < min_x_range || x >= max_x_range || y < min_y_range || y >= max_y_range || z < min_z_range ||
@@ -188,7 +166,6 @@ __global__ void generateVoxels_random_kernel(
   atomicExch(address, x);
   atomicExch(address + 1, y);
   atomicExch(address + 2, z);
-#if 0
   if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
     const float t = points[point_idx * POINT_NUM_FEATURES + 3];
     atomicExch(address + 3, t);  // Time_lag
@@ -198,17 +175,6 @@ __global__ void generateVoxels_random_kernel(
     atomicExch(address + 3, i);  // Intensity
     atomicExch(address + 4, t);  // Time_lag
   }
-#else
-  if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
-    const float t = load_streaming(src_ptr++);  // 3
-    atomicExch(address + 3, t);  // Time_lag
-  } else if (POINT_NUM_FEATURES == POINT_DIM_XYZIT) {
-    const float i = load_streaming(src_ptr++);  // 3
-    const float t = load_streaming(src_ptr++);  // 4
-    atomicExch(address + 3, i);  // Intensity
-    atomicExch(address + 4, t);  // Time_lag
-  }
-#endif  // 0
 }
 
 template <std::size_t POINT_NUM_FEATURES>
@@ -241,10 +207,9 @@ __global__ void generateBaseFeatures_kernel(
     for (int i = 0; i < count; i++) {
       int inIndex = voxel_index * MAX_POINT_IN_VOXEL_SIZE + i;
       int outIndex = current_pillarId * MAX_POINT_IN_VOXEL_SIZE + i;
-      // Isn't this dangerous?
       ((float4 *)voxel_features)[outIndex] = ((float4 *)voxels)[inIndex];
     }
-  } else {  // POINT_DIM_XYZIT
+  } else {
     for (int i = 0; i < count; i++) {
       int inIndex = voxel_index * MAX_POINT_IN_VOXEL_SIZE + i;
       int outIndex = current_pillarId * MAX_POINT_IN_VOXEL_SIZE + i;
