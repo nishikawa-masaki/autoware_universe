@@ -112,6 +112,7 @@ void CenterPointTRT::initPtr()
     shuffle_indices_d_.get(), indexes.data(), config_.cloud_capacity_ * sizeof(unsigned int),
     cudaMemcpyHostToDevice, stream_));
   // For safety, wait for completion of copying.
+  // No need for synchronization here?
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
