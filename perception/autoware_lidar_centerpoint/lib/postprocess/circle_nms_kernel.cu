@@ -35,10 +35,12 @@ const std::size_t THREADS_PER_BLOCK_NMS = 64;
 namespace autoware::lidar_centerpoint
 {
 
+#if 0
 __device__ inline float dist2dPow(const Box3D * a, const Box3D * b)
 {
   return powf(a->x - b->x, 2) + powf(a->y - b->y, 2);
 }
+#endif  // 0
 
 // cspell: ignore divup
 __global__ void circleNMS_Kernel(
@@ -58,16 +60,23 @@ __global__ void circleNMS_Kernel(
   const std::size_t col_size =
     fminf(num_boxes3d - col_start * THREADS_PER_BLOCK_NMS, THREADS_PER_BLOCK_NMS);
 
-  __shared__ Box3D block_boxes[THREADS_PER_BLOCK_NMS];
+  // __shared__ Box3D block_boxes[THREADS_PER_BLOCK_NMS];
+  __shared__ float block_boxes_x[THREADS_PER_BLOCK_NMS];
+  __shared__ float block_boxes_y[THREADS_PER_BLOCK_NMS];
 
   if (threadIdx.x < col_size) {
-    block_boxes[threadIdx.x] = boxes[THREADS_PER_BLOCK_NMS * col_start + threadIdx.x];
+    const Box3D * box = &(boxes[THREADS_PER_BLOCK_NMS * col_start + threadIdx.x]);
+    block_boxes_x[threadIdx.x] = box->x;
+    block_boxes_y[threadIdx.x] = box->y;
+//    block_boxes[threadIdx.x] = boxes[THREADS_PER_BLOCK_NMS * col_start + threadIdx.x];
   }
   __syncthreads();
 
   if (threadIdx.x < row_size) {
     const std::size_t cur_box_idx = THREADS_PER_BLOCK_NMS * row_start + threadIdx.x;
     const Box3D * cur_box = boxes + cur_box_idx;
+    const float cur_x = cur_box->x;
+    const float cur_y = cur_box->y;
 
     std::uint64_t t = 0;
     std::size_t start = 0;
@@ -75,7 +84,10 @@ __global__ void circleNMS_Kernel(
       start = threadIdx.x + 1;
     }
     for (std::size_t i = start; i < col_size; i++) {
-      if (dist2dPow(cur_box, block_boxes + i) < dist2d_pow_threshold) {
+      const float dx = cur_x - block_boxes_x[i];
+      const float dy = cur_y - block_boxes_y[i];
+//      if (dist2dPow(cur_box, block_boxes + i) < dist2d_pow_threshold) {
+      if ((dx * dx + dy * dy) < dist2d_pow_threshold) {
         t |= 1ULL << i;
       }
     }
