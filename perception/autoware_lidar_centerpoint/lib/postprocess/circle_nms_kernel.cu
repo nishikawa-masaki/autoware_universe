@@ -29,7 +29,7 @@ All Rights Reserved 2019-2020.
 
 namespace
 {
-const std::size_t THREADS_PER_BLOCK_NMS = 64;
+const std::size_t THREADS_PER_BLOCK_NMS = 16;
 }  // namespace
 
 namespace autoware::lidar_centerpoint
