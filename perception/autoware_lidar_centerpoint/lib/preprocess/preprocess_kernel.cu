@@ -265,11 +265,11 @@ __global__ void generateFeatures_kernel(
   // voxel_features (float): (max_voxel_size, max_point_in_voxel_size, point_feature_size)
   // voxel_num_points (int): (max_voxel_size)
   // coords (int): (max_voxel_size, point_dim_size)
-  int point_idx = threadIdx.x % MAX_POINT_IN_VOXEL_SIZE;
-  int thread_in_warp = point_idx;
+  const int point_idx = threadIdx.x % MAX_POINT_IN_VOXEL_SIZE;
+  const int thread_in_warp = point_idx;
   // 1 warp processes 1 pillar (= voxel).
-  int pillar_idx_inBlock = threadIdx.x / MAX_POINT_IN_VOXEL_SIZE;  // max_point_in_voxel_size
-  int pillar_idx = blockIdx.x * WARPS_PER_BLOCK + pillar_idx_inBlock;
+  const int pillar_idx_inBlock = threadIdx.x / MAX_POINT_IN_VOXEL_SIZE;  // max_point_in_voxel_size
+  const int pillar_idx = blockIdx.x * WARPS_PER_BLOCK + pillar_idx_inBlock;
   // int pillar_idx_org = pillar_idx;
   // int max_pillar_idx = blockIdx.x * WARPS_PER_BLOCK 
 
@@ -285,7 +285,9 @@ __global__ void generateFeatures_kernel(
     (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_11) ? POINT_DIM_XYZIT : POINT_DIM_XYZT;
 
   // load src
-  __shared__ float pillarSM[WARPS_PER_BLOCK][point_dim][MAX_POINT_IN_VOXEL_SIZE];
+  constexpr int POINTS_WITH_FILLING = MAX_POINT_IN_VOXEL_SIZE + 1;
+  // __shared__ float pillarSM[WARPS_PER_BLOCK][point_dim][MAX_POINT_IN_VOXEL_SIZE];
+  __shared__ float pillarSM[WARPS_PER_BLOCK][point_dim][POINTS_WITH_FILLING];
   __shared__ float3 pillarSumSM[WARPS_PER_BLOCK];
   __shared__ int3 cordsSM[WARPS_PER_BLOCK];
   __shared__ int pointsNumSM[WARPS_PER_BLOCK];
@@ -312,18 +314,19 @@ __global__ void generateFeatures_kernel(
   // Each thread reads values from the global memory ignoring the meaning into the shared memory.
   // This pattern allows coalesced access.
   // const int THREADS_IN_WARP = 32;
-  const int block_offset =
+  const int src_offset =
         pillar_idx * MAX_POINT_IN_VOXEL_SIZE * point_dim;
 //      (blockIdx.x * WARPS_PER_BLOCK * THREADS_IN_WARP * MAX_POINT_IN_VOXEL_SIZE * point_dim);  // This can be const;
-  const int pillar_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim;
+  const int dst_offset = pillar_idx_inBlock * POINTS_WITH_FILLING * point_dim;
 #pragma unroll
   for (int i = 0; i < point_dim; i++) {
     int thread_offset = NUM_THREADS_IN_WARP * i + thread_in_warp;
     int dst_point = thread_offset / point_dim;
     int dst_dim = thread_offset % point_dim;
-    int dst_index = dst_dim * NUM_THREADS_IN_WARP + dst_point;
+    // int dst_index = dst_dim * NUM_THREADS_IN_WARP + dst_point;
+    int dst_index = dst_dim * POINTS_WITH_FILLING + dst_point;
     int src_index = i * MAX_POINT_IN_VOXEL_SIZE + thread_in_warp;
-    ((float *)pillarSM)[pillar_offset + dst_index] = ((float *)voxel_features)[block_offset + src_index];
+    ((float *)pillarSM)[dst_offset + dst_index] = ((float *)voxel_features)[src_offset + src_index];
   }
 #endif  // 0
   __syncthreads();
