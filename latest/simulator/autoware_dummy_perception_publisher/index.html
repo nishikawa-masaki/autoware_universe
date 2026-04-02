@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22941,7 +22941,7 @@
 <tbody>
 <tr>
 <td><code>output/dynamic_object</code></td>
-<td><code>tier4_perception_msgs::msg::DetectedObjectsWithFeature</code></td>
+<td><code>autoware_perception_msgs::msg::DetectedObjects</code></td>
 <td>dummy detection objects</td>
 </tr>
 <tr>
@@ -22987,22 +22987,10 @@
 <td>if True, use ray tracking</td>
 </tr>
 <tr>
-<td><code>use_object_recognition</code></td>
-<td>bool</td>
-<td>true</td>
-<td>if True, publish objects topic</td>
-</tr>
-<tr>
 <td><code>use_base_link_z</code></td>
 <td>bool</td>
 <td>true</td>
 <td>if True, node uses z coordinate of ego base_link</td>
-</tr>
-<tr>
-<td><code>publish_ground_truth</code></td>
-<td>bool</td>
-<td>false</td>
-<td>if True, publish ground truth objects</td>
 </tr>
 <tr>
 <td><code>use_fixed_random_seed</code></td>
@@ -23030,6 +23018,7 @@
 </tr>
 </tbody>
 </table>
+<p><code>output/dynamic_object</code> is always published. <code>output/debug/ground_truth_objects</code> is published only when subscribers exist.</p>
 <h3 id="predictedobjectmovementplugin-parameters">PredictedObjectMovementPlugin Parameters<a class="headerlink" href="#predictedobjectmovementplugin-parameters" title="Permanent link">#</a></h3>
 <table>
 <thead>

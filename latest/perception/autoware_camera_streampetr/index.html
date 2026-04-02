@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -23063,7 +23063,8 @@
 <p>This package implements a TensorRT powered inference node for StreamPETR [1]. This is the first camera-only 3D object detection node in autoware.</p>
 <p>This node has been optimized for multi-camera systems where the camera topics are published in a sequential manner, not all at once. The node takes
 advantage of this by preprocessing (resize, crop, normalize) the images and storing them appropriately on GPU, so that delay due to preprocessing can be minimized.</p>
-<div class="highlight"><pre><span></span><code>Topic for image_i arrived                                     -------------------------
+<p>```pgsql</p>
+<p>Topic for image_i arrived                                     -------------------------
   |                                                                                   |
   |                                                                                   |
   |                                                                                   |
@@ -23086,13 +23087,13 @@ Preprocess image (scale &amp; crop ROI &amp; normalize)                         
 Store in GPU memory binding location for model input                                  |
   |                                                          -------------------------|
   v                                                                                   |
-Is image the `anchor_image`?                                                          |
+Is image the <code>anchor_image</code>?                                                          |
   |                \                                                                  |
   |                 \                                                                 |
 No                  Yes                                                               |
   |                  |                                                                |
   v                  v                                                                | If multithreading is on
-(Wait)     Are all images synced within `max_time_difference`?                        | image Updates are temporarily frozen
+(Wait)     Are all images synced within <code>max_time_difference</code>?                        | image Updates are temporarily frozen
                       |                           \                                   | until this part completes.
                       |                            \                                  |
                     Yes                             No                                |
@@ -23104,8 +23105,8 @@ No                  Yes                                                         
          Postprocess (NMS + ROS2 format)                                              |
                       |                                                               |
                       v                                                               |
-             Publish predictions                             -------------------------|
-</code></pre></div>
+             Publish predictions                             -------------------------|</p>
+<p>```</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -23233,12 +23234,12 @@ No                  Yes                                                         
 </ul>
 <h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
 <p>The <code>autoware_camera_streampetr</code> node has a <code>build_only</code> option to build the TensorRT engine files from the specified ONNX files, after which the program exits.</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_camera_streampetr<span class="w"> </span>tensorrt_stream_petr.launch.xml<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
-</code></pre></div>
+<p><code>bash
+ros2 launch autoware_camera_streampetr tensorrt_stream_petr.launch.xml build_only:=true</code></p>
 <h3 id="the-log_level-option">The <code>log_level</code> option<a class="headerlink" href="#the-log_level-option" title="Permanent link">#</a></h3>
 <p>The default logging severity level for <code>autoware_camera_streampetr</code> is <code>info</code>. For debugging purposes, the developer may decrease severity level using <code>log_level</code> parameter:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_camera_streampetr<span class="w"> </span>tensorrt_stream_petr.launch.xml<span class="w"> </span>log_level:<span class="o">=</span>debug
-</code></pre></div>
+<p><code>bash
+ros2 launch autoware_camera_streampetr tensorrt_stream_petr.launch.xml log_level:=debug</code></p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>This node is camera-only and does not require pointcloud input. It assumes:</p>
 <ul>

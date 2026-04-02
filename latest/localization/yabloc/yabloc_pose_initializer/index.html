@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22841,11 +22841,11 @@
 <p>This package requires the pre-trained semantic segmentation model for runtime. This model is usually downloaded by <code>ansible</code> during env preparation phase of the <a href="https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/">installation</a>.
 It is also possible to download it manually. Even if the model is not downloaded, initialization will still complete, but the accuracy may be compromised.</p>
 <p>To download and extract the model manually:</p>
-<div class="highlight"><pre><span></span><code>$<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>~/autoware_data/yabloc_pose_initializer/
-$<span class="w"> </span>wget<span class="w"> </span>-P<span class="w"> </span>~/autoware_data/yabloc_pose_initializer/<span class="w"> </span><span class="se">\</span>
-<span class="w">       </span>https://s3.ap-northeast-2.wasabisys.com/pinto-model-zoo/136_road-segmentation-adas-0001/resources.tar.gz
-$<span class="w"> </span>tar<span class="w"> </span>xzf<span class="w"> </span>~/autoware_data/yabloc_pose_initializer/resources.tar.gz<span class="w"> </span>-C<span class="w"> </span>~/autoware_data/yabloc_pose_initializer/
-</code></pre></div>
+<p><code>bash
+$ mkdir -p ~/autoware_data/yabloc_pose_initializer/
+$ wget -P ~/autoware_data/yabloc_pose_initializer/ \
+       https://s3.ap-northeast-2.wasabisys.com/pinto-model-zoo/136_road-segmentation-adas-0001/resources.tar.gz
+$ tar xzf ~/autoware_data/yabloc_pose_initializer/resources.tar.gz -C ~/autoware_data/yabloc_pose_initializer/</code></p>
 <h2 id="note">Note<a class="headerlink" href="#note" title="Permanent link">#</a></h2>
 <p>This package makes use of external code. The trained files are provided by apollo. The trained files are automatically downloaded during env preparation.</p>
 <p>Original model URL</p>

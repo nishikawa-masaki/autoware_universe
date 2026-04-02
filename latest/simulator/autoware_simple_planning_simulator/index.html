@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -23400,7 +23400,8 @@
 <p><em>Note:</em> Parameters <code>model_module_paths</code>, <code>model_param_paths</code>, and <code>model_class_names</code> need to have the same length.</p>
 <p>The <code>acceleration_map</code> is used only for <code>DELAY_STEER_MAP_ACC_GEARED</code> and it shows the acceleration command on the vertical axis and the current velocity on the horizontal axis, with each cell representing the converted acceleration command that is actually used in the simulator's motion calculation. Values in between are linearly interpolated.</p>
 <p>Example of <code>acceleration_map.csv</code></p>
-<div class="highlight"><pre><span></span><code>default,  0.00,  1.39,  2.78,  4.17,  5.56,  6.94,  8.33,  9.72, 11.11, 12.50, 13.89, 15.28, 16.67
+<p><code>csv
+default,  0.00,  1.39,  2.78,  4.17,  5.56,  6.94,  8.33,  9.72, 11.11, 12.50, 13.89, 15.28, 16.67
 -4.0,    -4.40, -4.36, -4.38, -4.12, -4.20, -3.94, -3.98, -3.80, -3.77, -3.76, -3.59, -3.50, -3.40
 -3.5,    -4.00, -3.91, -3.85, -3.64, -3.68, -3.55, -3.42, -3.24, -3.25, -3.00, -3.04, -2.93, -2.80
 -3.0,    -3.40, -3.37, -3.33, -3.00, -3.00, -2.90, -2.88, -2.65, -2.43, -2.44, -2.43, -2.39, -2.30
@@ -23419,8 +23420,7 @@
  0.8,     0.82,  0.81,  0.78,  0.68,  0.63,  0.56,  0.53,  0.48,  0.43,  0.41,  0.37,  0.38,  0.40
  1.0,     1.00,  1.08,  1.01,  0.88,  0.76,  0.69,  0.66,  0.58,  0.54,  0.49,  0.45,  0.40,  0.40
  1.5,     1.52,  1.50,  1.38,  1.26,  1.14,  1.03,  0.91,  0.82,  0.67,  0.61,  0.51,  0.41,  0.41
- 2.0,     1.80,  1.80,  1.64,  1.43,  1.25,  1.11,  0.96,  0.81,  0.70,  0.59,  0.51,  0.42,  0.42
-</code></pre></div>
+ 2.0,     1.80,  1.80,  1.64,  1.43,  1.25,  1.11,  0.96,  0.81,  0.70,  0.59,  0.51,  0.42,  0.42</code></p>
 <p><img alt="acceleration_map" src="media/acceleration_map.svg"></p>
 <h5 id="actuation_cmd-model">ACTUATION_CMD model<a class="headerlink" href="#actuation_cmd-model" title="Permanent link">#</a></h5>
 <p>The simple_planning_simulator usually operates by receiving Control commands, but when the <code>ACTUATION_CMD*</code> model is selected, it receives Actuation commands instead of Control commands. This model can simulate the motion using the vehicle command that is actually sent to the real vehicle. Therefore, when this model is selected, the <code>raw_vehicle_cmd_converter</code> is also launched.
@@ -23438,15 +23438,15 @@ Please refer to the <a href="docs/actuation_cmd_sim/">actuation_cmd_sim.md</a> f
 <p>In a file <code>src/core/autoware_core/description/autoware_sample_vehicle_description/config/simulator_model.param.yaml</code> set <code>vehicle_model_type</code> to <code>LEARNED_STEER_VEL</code>. In the same file set the following parameters. These models are for testing and do not require any parameter file.</p>
 </li>
 </ol>
-<div class="highlight"><pre><span></span><code><span class="nt">model_module_paths</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">[</span>
-<span class="w">    </span><span class="s">"control_analysis_pipeline.autoware_models.vehicle.kinematic"</span><span class="p p-Indicator">,</span>
-<span class="w">    </span><span class="s">"control_analysis_pipeline.autoware_models.steering.steer_example"</span><span class="p p-Indicator">,</span>
-<span class="w">    </span><span class="s">"control_analysis_pipeline.autoware_models.drive.drive_example"</span><span class="p p-Indicator">,</span>
-<span class="w">  </span><span class="p p-Indicator">]</span>
-<span class="nt">model_param_paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">""</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">""</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">""</span><span class="p p-Indicator">]</span>
-<span class="nt">model_class_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"KinematicModel"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"SteerExample"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"DriveExample"</span><span class="p p-Indicator">]</span>
-</code></pre></div>
+<p><code>yaml
+model_module_paths:
+  [
+    "control_analysis_pipeline.autoware_models.vehicle.kinematic",
+    "control_analysis_pipeline.autoware_models.steering.steer_example",
+    "control_analysis_pipeline.autoware_models.drive.drive_example",
+  ]
+model_param_paths: ["", "", ""]
+model_class_names: ["KinematicModel", "SteerExample", "DriveExample"]</code></p>
 <h3 id="default-tf-configuration">Default TF configuration<a class="headerlink" href="#default-tf-configuration" title="Permanent link">#</a></h3>
 <p>Since the vehicle outputs <code>odom</code>-&gt;<code>base_link</code> tf, this simulator outputs the tf with the same frame_id configuration.
 In the simple_planning_simulator.launch.py, the node that outputs the <code>map</code>-&gt;<code>odom</code> tf, that usually estimated by the localization module (e.g. NDT), will be launched as well. Since the tf output by this simulator module is an ideal value, <code>odom</code>-&gt;<code>map</code> will always be 0.</p>

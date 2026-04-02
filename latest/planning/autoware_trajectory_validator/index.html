@@ -8,10 +8,10 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_traffic_rule_filter/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_validator/">
       
       
-        <link rel="prev" href="../autoware_trajectory_safety_filter/">
+        <link rel="prev" href="../autoware_trajectory_ranker/">
       
       
         <link rel="next" href="../behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/">
@@ -21,11 +21,11 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Autoware Trajectory Traffic Rule Filter - Autoware Universe Documentation</title>
+        <title>Trajectory safety filter - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#autoware-trajectory-traffic-rule-filter" class="md-skip">
+        <a href="#trajectory-safety-filter" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Autoware Trajectory Traffic Rule Filter
+              Trajectory safety filter
             
           </span>
         </div>
@@ -14535,7 +14535,7 @@
   
   
     <li class="md-nav__item">
-      <a href="." class="md-nav__link">
+      <a href="../autoware_trajectory_traffic_rule_filter" class="md-nav__link">
         
   
   
@@ -22728,10 +22728,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purpose" class="md-nav__link">
+  <a href="#purposerole" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose
+        Purpose/Role
       
     </span>
   </a>
@@ -22739,41 +22739,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#inner-workings-algorithms" class="md-nav__link">
+  <a href="#algorithm-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inner-workings / Algorithms
+        Algorithm Overview
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Inner-workings / Algorithms">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#filter-plugins" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filter Plugins
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -22801,21 +22773,38 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#diagnostics" class="md-nav__link">
+  <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Diagnostics
+        Parameters
       
     </span>
   </a>
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Parameters
+        Future Work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Future Work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#performance-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Optimization
       
     </span>
   </a>
@@ -22847,102 +22836,60 @@
   
 
 
-<div><h1 id="autoware-trajectory-traffic-rule-filter">Autoware Trajectory Traffic Rule Filter<a class="headerlink" href="#autoware-trajectory-traffic-rule-filter" title="Permanent link">#</a></h1>
-<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>The <code>autoware_trajectory_traffic_rule_filter</code> package provides a plugin-based filtering system for candidate trajectories based on traffic rules. It evaluates trajectories against various traffic regulations and safety constraints to ensure compliance with traffic laws.</p>
-<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
-<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h3>
-<p>The package uses a plugin architecture that allows for flexible and extensible traffic rule checking:</p>
-<ol>
-<li><strong>Main Node</strong>: <code>TrajectoryTrafficRuleFilter</code> - Manages plugins and coordinates filtering</li>
-<li><strong>Plugin Interface</strong>: <code>TrafficRuleFilterInterface</code> - Base class for all filter plugins</li>
-<li><strong>Filter Plugins</strong>: Individual filters that implement specific traffic rule checks</li>
-</ol>
-<h3 id="filter-plugins">Filter Plugins<a class="headerlink" href="#filter-plugins" title="Permanent link">#</a></h3>
-<h4 id="trafficlightfilter">TrafficLightFilter<a class="headerlink" href="#trafficlightfilter" title="Permanent link">#</a></h4>
+<div><h1 id="trajectory-safety-filter">Trajectory safety filter<a class="headerlink" href="#trajectory-safety-filter" title="Permanent link">#</a></h1>
+<h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
+<p>This node performs a safety check on each candidate trajectory before it enters the final ranking stage. It drops paths that are physically impossible for the ego vehicle or that create an obvious driving risk.</p>
+<h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
+<p>The node operates in three broad steps: collect the latest environment inputs, screen trajectories through a set of feasibility checks, then republish whichever paths survive.</p>
+<p>Checks applied to each trajectory:</p>
 <ul>
-<li>Validates trajectory compliance with traffic signals.</li>
-<li>Monitors traffic light states from the perception system.</li>
-<li><strong>Limitation</strong>: Currently, only circle light signals (RED, AMBER) are handled; arrow signals are ignored by this filter.</li>
-<li>Reject trajectories when:<ul>
-<li>the vehicle's footprint (front-end extension) crosses a red traffic light stop line.</li>
-<li>the vehicle's footprint crosses an amber traffic light stop line and it is determined that either:<ol>
-<li>ego can safely stop at the stop line without breaking the deceleration/jerk limits, considering a <code>delay_response_time</code>.</li>
-<li>ego's <code>base_link</code> point cannot cross the stop line within the <code>crossing_time_limit</code>.</li>
-</ol>
-</li>
+<li>Data validity: removes trajectories that contain NaNs, non‑finite numbers, inconsistent timestamps, or are too short.</li>
+<li>Lane adherence: removes trajectories that will exit all lanelets within the configured look‑ahead time.</li>
+<li>Collision risk: removes trajectories whose estimated time‑to‑collision with any predicted object falls below threshold in the look‑ahead time.</li>
+<li>Vehicle constraint: removes trajectories that violates vehicle constraints, such as maximum speed, acceleration, and deceleration.</li>
 </ul>
-</li>
-</ul>
+<p>After these checks, the remaining trajectories, along with their original <code>generator_info</code>, are published.</p>
 <h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
 <h3 id="topics">Topics<a class="headerlink" href="#topics" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
 <th>Direction</th>
-<th>Topic Name</th>
-<th>Type</th>
+<th>Topic name</th>
+<th>Message type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Input</td>
-<td><code>~/input/candidate_trajectories</code></td>
-<td><code>autoware_internal_planning_msgs::msg::CandidateTrajectories</code></td>
-<td>Candidate trajectories to be filtered</td>
+<td>Subscribe</td>
+<td><code>~/input/trajectories</code></td>
+<td><code>autoware_internal_planning_msgs/CandidateTrajectories</code></td>
+<td>Candidate trajectories</td>
 </tr>
 <tr>
-<td>Input</td>
+<td>Subscribe</td>
 <td><code>~/input/lanelet2_map</code></td>
-<td><code>autoware_map_msgs::msg::LaneletMapBin</code></td>
-<td>Lanelet2 map containing traffic rule info</td>
+<td><code>autoware_map_msgs/msg/LaneletMapBin</code></td>
+<td>HD map</td>
 </tr>
 <tr>
-<td>Input</td>
-<td><code>~/input/traffic_signals</code></td>
-<td><code>autoware_perception_msgs::msg::TrafficLightGroupArray</code></td>
-<td>Current traffic light states</td>
+<td>Subscribe</td>
+<td><code>~/input/odometry</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td>Current ego pose</td>
 </tr>
 <tr>
-<td>Output</td>
-<td><code>~/output/candidate_trajectories</code></td>
-<td><code>autoware_internal_planning_msgs::msg::CandidateTrajectories</code></td>
-<td>Filtered trajectories that comply with traffic rules</td>
+<td>Subscribe</td>
+<td><code>~/input/objects</code></td>
+<td><code>autoware_perception_msgs/msg/PredictedObjects</code></td>
+<td>Obstacles for collision checking</td>
 </tr>
 <tr>
-<td>Output</td>
-<td><code>/diagnostics</code></td>
-<td><code>diagnostic_msgs::msg::DiagnosticArray</code></td>
-<td>Diagnostic status of the filtering process</td>
-</tr>
-</tbody>
-</table>
-<h3 id="diagnostics">Diagnostics<a class="headerlink" href="#diagnostics" title="Permanent link">#</a></h3>
-<p>The node publishes diagnostic information to monitor the status of the trajectory filtering process.</p>
-<table>
-<thead>
-<tr>
-<th>Level</th>
-<th>Message</th>
-<th>Condition</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>OK</code></td>
-<td>""</td>
-<td>At least one trajectory is feasible, including at least one from a diffusion-based planner if present.</td>
-</tr>
-<tr>
-<td><code>WARN</code></td>
-<td>"All diffusion planner trajectories are infeasible"</td>
-<td>Feasible trajectories exist, but all trajectories from generators named "Diffusion*" were filtered out.</td>
-</tr>
-<tr>
-<td><code>ERROR</code></td>
-<td>"No feasible trajectories found"</td>
-<td>All input candidate trajectories were filtered out by the active plugins.</td>
+<td>Publish</td>
+<td><code>~/output/trajectories</code></td>
+<td><code>autoware_internal_planning_msgs/CandidateTrajectories</code></td>
+<td>Trajectories that pass all feasibility checks</td>
 </tr>
 </tbody>
 </table>
@@ -22950,71 +22897,82 @@
 <table>
 <thead>
 <tr>
-<th>Name</th>
+<th>Parameter name</th>
 <th>Type</th>
+<th>Default</th>
 <th>Description</th>
-<th>Default Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>filter_names</code></td>
 <td>string array</td>
-<td>List of filter plugins to load</td>
-<td>See config file</td>
+<td>[]</td>
+<td>List of safety filter plugins to use (e.g., OutOfLaneFilter, CollisionFilter)</td>
+</tr>
+<tr>
+<td><code>out_of_lane.time</code></td>
+<td>double</td>
+<td>3.0</td>
+<td>Look-ahead time [s] during which the trajectory must stay inside a lane</td>
+</tr>
+<tr>
+<td><code>out_of_lane.min_value</code></td>
+<td>double</td>
+<td>0.0</td>
+<td>Minimum distance [m] from lane boundary</td>
+</tr>
+<tr>
+<td><code>collision.time</code></td>
+<td>double</td>
+<td>3.0</td>
+<td>Look-ahead time [s] for collision search</td>
+</tr>
+<tr>
+<td><code>collision.min_value</code></td>
+<td>double</td>
+<td>2.0</td>
+<td>Minimum acceptable time to collision [s]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_speed</code></td>
+<td>double</td>
+<td>16.7</td>
+<td>Maximum allowed speed [m/s]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_acceleration</code></td>
+<td>double</td>
+<td>5.0</td>
+<td>Maximum allowed acceleration [m/s^2]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_deceleration</code></td>
+<td>double</td>
+<td>5.0</td>
+<td>Maximum allowed deceleration; positive but represents deceleration [m/s^s]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_steering_angle</code></td>
+<td>double</td>
+<td>0.8</td>
+<td>Maximum allowed steering angle [rad]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_steering_rate</code></td>
+<td>double</td>
+<td>0.3</td>
+<td>Maximum allowed steering rate [rad/s]</td>
 </tr>
 </tbody>
 </table>
-<h4 id="plugin-configuration">Plugin Configuration<a class="headerlink" href="#plugin-configuration" title="Permanent link">#</a></h4>
-<p>The active filters are specified in <code>config/trajectory_traffic_rule_filter.param.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">/**</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">ros__parameters</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">filter_names</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_traffic_rule_filter::plugin::TrafficLightFilter"</span>
-</code></pre></div>
-<h4 id="traffic-light-filter-parameters">Traffic Light Filter parameters<a class="headerlink" href="#traffic-light-filter-parameters" title="Permanent link">#</a></h4>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>traffic_light_filter.deceleration_limit</code></td>
-<td>double</td>
-<td>Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit</td>
-<td>2.8</td>
-</tr>
-<tr>
-<td><code>traffic_light_filter.jerk_limit</code></td>
-<td>double</td>
-<td>Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit</td>
-<td>5.0</td>
-</tr>
-<tr>
-<td><code>traffic_light_filter.delay_response_time</code></td>
-<td>double</td>
-<td>Delay response time (reaction time) used to estimate the minimum ego stopping distance from its current state</td>
-<td>0.5</td>
-</tr>
-<tr>
-<td><code>traffic_light_filter.crossing_time_limit</code></td>
-<td>double</td>
-<td>Trajectories crossing an amber light are rejected if they cannot cross (reach the stop line with <code>base_link</code>) before this time</td>
-<td>2.75</td>
-</tr>
-<tr>
-<td><code>traffic_light_filter.treat_amber_light_as_red_light</code></td>
-<td>bool</td>
-<td>When true, amber lights are handled like red lights (using vehicle footprint crossing). If false, amber lights use the <code>base_link</code> crossing logic described above.</td>
-<td>true</td>
-</tr>
-</tbody>
-</table></div>
+<h2 id="future-work">Future Work<a class="headerlink" href="#future-work" title="Permanent link">#</a></h2>
+<h3 id="performance-optimization">Performance Optimization<a class="headerlink" href="#performance-optimization" title="Permanent link">#</a></h3>
+<p>The current implementation can be further optimized for computational efficiency:</p>
+<ul>
+<li><strong>Caching Strategy</strong>: Implement smarter caching mechanisms for lanelet queries and boundary checks to avoid redundant computations across similar trajectories</li>
+<li><strong>Adaptive Resolution</strong>: Dynamically adjust the checking resolution based on vehicle speed and trajectory curvature to balance accuracy and performance</li>
+</ul></div>
 
 
 
@@ -23050,7 +23008,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_trajectory_safety_filter/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Trajectory safety filter">
+          <a href="../autoware_trajectory_ranker/" class="md-footer__link md-footer__link--prev" aria-label="Previous: autoware_trajectory_ranker">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23060,7 +23018,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Trajectory safety filter
+                autoware_trajectory_ranker
               </div>
             </div>
           </a>

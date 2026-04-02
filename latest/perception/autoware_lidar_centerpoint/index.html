@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -23059,96 +23059,8 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#deploying-centerpoint-model-to-autoware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Deploying CenterPoint model to Autoware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#changelog" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Changelog
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-error-detection-and-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        (Optional) Error detection and handling
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-performance-characterization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        (Optional) Performance characterization
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#referencesexternal-links" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References/External links
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        (Optional) Future extensions / Unimplemented parts
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#acknowledgment-deepenais-3d-annotation-tools-contribution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Acknowledgment: deepen.ai's 3D Annotation Tools Contribution
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#legal-notice" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Legal Notice
-      
-    </span>
-  </a>
   
 </li>
       
@@ -23418,8 +23330,8 @@
 <h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
 <p>The <code>autoware_lidar_centerpoint</code> node has <code>build_only</code> option to build the TensorRT engine file from the ONNX file.
 Although it is preferred to move all the ROS parameters in <code>.param.yaml</code> file in Autoware Universe, the <code>build_only</code> option is not moved to the <code>.param.yaml</code> file for now, because it may be used as a flag to execute the build as a pre-task. You can execute with the following command:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w"> </span>model_name:<span class="o">=</span>centerpoint_tiny<span class="w"> </span>model_path:<span class="o">=</span>/home/autoware/autoware_data/lidar_centerpoint<span class="w"> </span>model_param_path:<span class="o">=</span><span class="k">$(</span>ros2<span class="w"> </span>pkg<span class="w"> </span>prefix<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>--share<span class="k">)</span>/config/centerpoint_tiny.param.yaml<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
-</code></pre></div>
+<p><code>bash
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_tiny model_path:=/home/autoware/autoware_data/lidar_centerpoint model_param_path:=$(ros2 pkg prefix autoware_lidar_centerpoint --share)/config/centerpoint_tiny.param.yaml build_only:=true</code></p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <ul>
 <li>The <code>object.existence_probability</code> is stored the value of classification confidence of a DNN, not probability.</li>
@@ -23440,50 +23352,50 @@ and seamlessly deploying it within Autoware.</p>
 <h4 id="install-prerequisites">Install prerequisites<a class="headerlink" href="#install-prerequisites" title="Permanent link">#</a></h4>
 <p><strong>Step 1.</strong> Download and install Miniconda from the <a href="https://mmpretrain.readthedocs.io/en/latest/get_started.html">official website</a>.</p>
 <p><strong>Step 2.</strong> Create a conda virtual environment and activate it</p>
-<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>train-centerpoint<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.8<span class="w"> </span>-y
-conda<span class="w"> </span>activate<span class="w"> </span>train-centerpoint
-</code></pre></div>
+<p><code>bash
+conda create --name train-centerpoint python=3.8 -y
+conda activate train-centerpoint</code></p>
 <p><strong>Step 3.</strong> Install PyTorch</p>
 <p>Please ensure you have PyTorch installed, and compatible with CUDA 11.6, as it is a requirement for current Autoware.</p>
-<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span><span class="nv">pytorch</span><span class="o">==</span><span class="m">1</span>.13.1<span class="w"> </span><span class="nv">torchvision</span><span class="o">==</span><span class="m">0</span>.14.1<span class="w"> </span>pytorch-cuda<span class="o">=</span><span class="m">11</span>.6<span class="w"> </span>-c<span class="w"> </span>pytorch<span class="w"> </span>-c<span class="w"> </span>nvidia
-</code></pre></div>
+<p><code>bash
+conda install pytorch==1.13.1 torchvision==0.14.1 pytorch-cuda=11.6 -c pytorch -c nvidia</code></p>
 <h4 id="install-mmdetection3d">Install mmdetection3d<a class="headerlink" href="#install-mmdetection3d" title="Permanent link">#</a></h4>
 <p><strong>Step 1.</strong> Install MMEngine, MMCV, and MMDetection using MIM</p>
-<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>openmim
-mim<span class="w"> </span>install<span class="w"> </span>mmengine
-mim<span class="w"> </span>install<span class="w"> </span><span class="s1">'mmcv&gt;=2.0.0rc4'</span>
-mim<span class="w"> </span>install<span class="w"> </span><span class="s1">'mmdet&gt;=3.0.0rc5, &lt;3.3.0'</span>
-</code></pre></div>
+<p><code>bash
+pip install -U openmim
+mim install mmengine
+mim install 'mmcv&gt;=2.0.0rc4'
+mim install 'mmdet&gt;=3.0.0rc5, &lt;3.3.0'</code></p>
 <p><strong>Step 2.</strong> Install mmdetection3d forked repository</p>
 <p>Introduced several valuable enhancements in our fork of the mmdetection3d repository.
 Notably, we've made the PointPillar z voxel feature input optional to maintain compatibility with the original paper.
 In addition, we've integrated a PyTorch to ONNX converter and a T4 format reader for added functionality.</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/autowarefoundation/mmdetection3d.git
-<span class="nb">cd</span><span class="w"> </span>mmdetection3d
-pip<span class="w"> </span>install<span class="w"> </span>-v<span class="w"> </span>-e<span class="w"> </span>.
-</code></pre></div>
+<p><code>bash
+git clone https://github.com/autowarefoundation/mmdetection3d.git
+cd mmdetection3d
+pip install -v -e .</code></p>
 <h4 id="use-training-repository-with-docker">Use Training Repository with Docker<a class="headerlink" href="#use-training-repository-with-docker" title="Permanent link">#</a></h4>
 <p>Alternatively, you can use Docker to run the mmdetection3d repository. We provide a Dockerfile to build a Docker image with the mmdetection3d repository and its dependencies.</p>
 <p>Clone fork of the mmdetection3d repository</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/autowarefoundation/mmdetection3d.git
-</code></pre></div>
+<p><code>bash
+git clone https://github.com/autowarefoundation/mmdetection3d.git</code></p>
 <p>Build the Docker image by running the following command:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>mmdetection3d
-docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>mmdetection3d<span class="w"> </span>-f<span class="w"> </span>docker/Dockerfile<span class="w"> </span>.
-</code></pre></div>
+<p><code>bash
+cd mmdetection3d
+docker build -t mmdetection3d -f docker/Dockerfile .</code></p>
 <p>Run the Docker container:</p>
-<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>--shm-size<span class="o">=</span>8g<span class="w"> </span>-it<span class="w"> </span>-v<span class="w"> </span><span class="o">{</span>DATA_DIR<span class="o">}</span>:/mmdetection3d/data<span class="w"> </span>mmdetection3d
-</code></pre></div>
+<p><code>bash
+docker run --gpus all --shm-size=8g -it -v {DATA_DIR}:/mmdetection3d/data mmdetection3d</code></p>
 <h3 id="preparing-nuscenes-dataset-for-training">Preparing NuScenes dataset for training<a class="headerlink" href="#preparing-nuscenes-dataset-for-training" title="Permanent link">#</a></h3>
 <p><strong>Step 1.</strong> Download the NuScenes dataset from the <a href="https://www.nuscenes.org/download">official website</a> and extract the dataset to a folder of your choice.</p>
 <p><strong>Note:</strong> The NuScenes dataset is large and requires significant disk space. Ensure you have enough storage available before proceeding.</p>
 <p><strong>Step 2.</strong> Create a symbolic link to the dataset folder</p>
-<div class="highlight"><pre><span></span><code>ln<span class="w"> </span>-s<span class="w"> </span>/path/to/nuscenes/dataset/<span class="w"> </span>/path/to/mmdetection3d/data/nuscenes/
-</code></pre></div>
+<p><code>bash
+ln -s /path/to/nuscenes/dataset/ /path/to/mmdetection3d/data/nuscenes/</code></p>
 <p><strong>Step 3.</strong> Prepare the NuScenes data by running:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>mmdetection3d
-python<span class="w"> </span>tools/create_data.py<span class="w"> </span>nuscenes<span class="w"> </span>--root-path<span class="w"> </span>./data/nuscenes<span class="w"> </span>--out-dir<span class="w"> </span>./data/nuscenes<span class="w"> </span>--extra-tag<span class="w"> </span>nuscenes
-</code></pre></div>
+<p><code>bash
+cd mmdetection3d
+python tools/create_data.py nuscenes --root-path ./data/nuscenes --out-dir ./data/nuscenes --extra-tag nuscenes</code></p>
 <h3 id="training-centerpoint-with-nuscenes-dataset">Training CenterPoint with NuScenes Dataset<a class="headerlink" href="#training-centerpoint-with-nuscenes-dataset" title="Permanent link">#</a></h3>
 <h4 id="prepare-the-config-file">Prepare the config file<a class="headerlink" href="#prepare-the-config-file" title="Permanent link">#</a></h4>
 <p>The configuration file that illustrates how to train the CenterPoint model with the NuScenes dataset is
@@ -23495,28 +23407,29 @@ aligning with the original paper's specifications and making the model compatibl
 <p>The CenterPoint model can be tailored to your specific requirements by modifying various parameters within the configuration file.
 This includes adjustments related to preprocessing operations, training, testing, model architecture, dataset, optimizer, learning rate scheduler, and more.</p>
 <h4 id="start-training">Start training<a class="headerlink" href="#start-training" title="Permanent link">#</a></h4>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>tools/train.py<span class="w"> </span>projects/AutowareCenterPoint/configs/centerpoint_custom.py<span class="w"> </span>--work-dir<span class="w"> </span>./work_dirs/centerpoint_custom
-</code></pre></div>
+<p><code>bash
+python tools/train.py projects/AutowareCenterPoint/configs/centerpoint_custom.py --work-dir ./work_dirs/centerpoint_custom</code></p>
 <h4 id="evaluation-of-the-trained-model">Evaluation of the trained model<a class="headerlink" href="#evaluation-of-the-trained-model" title="Permanent link">#</a></h4>
 <p>For evaluation purposes, we have included a sample dataset captured from the vehicle which consists of the following LiDAR sensors:
 1 x Velodyne VLS128, 4 x Velodyne VLP16, and 1 x Robosense RS Bpearl. This dataset comprises 600 LiDAR frames and encompasses 5 distinct classes, 6905 cars, 3951 pedestrians,
 75 cyclists, 162 buses, and 326 trucks 3D annotation. In the sample dataset, frames are annotated as 2 frames for each second. You can employ this dataset for a wide range of purposes,
 including training, evaluation, and fine-tuning of models. It is organized in the T4 format.</p>
 <h5 id="download-the-sample-dataset">Download the sample dataset<a class="headerlink" href="#download-the-sample-dataset" title="Permanent link">#</a></h5>
-<div class="highlight"><pre><span></span><code>wget<span class="w"> </span>https://autoware-files.s3.us-west-2.amazonaws.com/dataset/lidar_detection_sample_dataset.tar.gz
-<span class="c1">#Extract the dataset to a folder of your choice</span>
-tar<span class="w"> </span>-xvf<span class="w"> </span>lidar_detection_sample_dataset.tar.gz
-<span class="c1">#Create a symbolic link to the dataset folder</span>
-ln<span class="w"> </span>-s<span class="w"> </span>/PATH/TO/DATASET/<span class="w"> </span>/PATH/TO/mmdetection3d/data/tier4_dataset/
-</code></pre></div>
+<p>```bash
+wget https://autoware-files.s3.us-west-2.amazonaws.com/dataset/lidar_detection_sample_dataset.tar.gz</p>
+<h1 id="extract-the-dataset-to-a-folder-of-your-choice">Extract the dataset to a folder of your choice<a class="headerlink" href="#extract-the-dataset-to-a-folder-of-your-choice" title="Permanent link">#</a></h1>
+<p>tar -xvf lidar_detection_sample_dataset.tar.gz</p>
+<h1 id="create-a-symbolic-link-to-the-dataset-folder">Create a symbolic link to the dataset folder<a class="headerlink" href="#create-a-symbolic-link-to-the-dataset-folder" title="Permanent link">#</a></h1>
+<p>ln -s /PATH/TO/DATASET/ /PATH/TO/mmdetection3d/data/tier4_dataset/
+```</p>
 <h5 id="prepare-dataset-and-evaluate-trained-model">Prepare dataset and evaluate trained model<a class="headerlink" href="#prepare-dataset-and-evaluate-trained-model" title="Permanent link">#</a></h5>
 <p>Create <code>.pkl</code> files for training, evaluation, and testing.</p>
 <p>The dataset was formatted according to T4Dataset specifications, with 'sample_dataset' designated as one of its versions.</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>tools/create_data.py<span class="w"> </span>T4Dataset<span class="w"> </span>--root-path<span class="w"> </span>data/sample_dataset/<span class="w"> </span>--out-dir<span class="w"> </span>data/sample_dataset/<span class="w"> </span>--extra-tag<span class="w"> </span>T4Dataset<span class="w"> </span>--version<span class="w"> </span>sample_dataset<span class="w"> </span>--annotation-hz<span class="w"> </span><span class="m">2</span>
-</code></pre></div>
+<p><code>bash
+python tools/create_data.py T4Dataset --root-path data/sample_dataset/ --out-dir data/sample_dataset/ --extra-tag T4Dataset --version sample_dataset --annotation-hz 2</code></p>
 <p>Run evaluation</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>tools/test.py<span class="w"> </span>projects/AutowareCenterPoint/configs/centerpoint_custom_test.py<span class="w"> </span>/PATH/OF/THE/CHECKPOINT<span class="w">  </span>--task<span class="w"> </span>lidar_det
-</code></pre></div>
+<p><code>bash
+python tools/test.py projects/AutowareCenterPoint/configs/centerpoint_custom_test.py /PATH/OF/THE/CHECKPOINT  --task lidar_det</code></p>
 <p>Evaluation results could be relatively low because of the e to variations in sensor modalities between the sample dataset
 and the training dataset. The model's training parameters are originally tailored to the NuScenes dataset, which employs a single lidar
 sensor positioned atop the vehicle. In contrast, the provided sample dataset comprises concatenated point clouds positioned at
@@ -23527,37 +23440,37 @@ the base link location of the vehicle.</p>
 such as preprocessing operations, are implemented externally. Under the fork of the mmdetection3d repository,
 we have included a script that converts the CenterPoint model to Autoware compatible ONNX format.
 You can find it in <code>mmdetection3d/projects/AutowareCenterPoint</code> file.</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>projects/AutowareCenterPoint/centerpoint_onnx_converter.py<span class="w"> </span>--cfg<span class="w"> </span>projects/AutowareCenterPoint/configs/centerpoint_custom.py<span class="w"> </span>--ckpt<span class="w"> </span>work_dirs/centerpoint_custom/YOUR_BEST_MODEL.pth<span class="w"> </span>--work-dir<span class="w"> </span>./work_dirs/onnx_models
-</code></pre></div>
+<p><code>bash
+python projects/AutowareCenterPoint/centerpoint_onnx_converter.py --cfg projects/AutowareCenterPoint/configs/centerpoint_custom.py --ckpt work_dirs/centerpoint_custom/YOUR_BEST_MODEL.pth --work-dir ./work_dirs/onnx_models</code></p>
 <h4 id="create-the-config-file-for-the-custom-model">Create the config file for the custom model<a class="headerlink" href="#create-the-config-file-for-the-custom-model" title="Permanent link">#</a></h4>
 <p>Create a new config file named <strong>centerpoint_custom.param.yaml</strong> under the config file directory of the autoware_lidar_centerpoint node. Sets the parameters of the config file like
 point_cloud_range, point_feature_size, voxel_size, etc. according to the training config file.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">/**</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">ros__parameters</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">class_names</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"CAR"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"TRUCK"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"BUS"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"BICYCLE"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"PEDESTRIAN"</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="nt">point_feature_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-<span class="w">    </span><span class="nt">max_voxel_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40000</span>
-<span class="w">    </span><span class="nt">point_cloud_range</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">-51.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-51.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-3.0</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">51.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">51.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">5.0</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="nt">voxel_size</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">8.0</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="nt">downsample_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">    </span><span class="nt">encoder_in_feature_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9</span>
-<span class="w">    </span><span class="c1"># post-process params</span>
-<span class="w">    </span><span class="nt">circle_nms_dist_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
-<span class="w">    </span><span class="nt">iou_nms_search_distance_2d</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0</span>
-<span class="w">    </span><span class="nt">iou_nms_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
-<span class="w">    </span><span class="nt">yaw_norm_thresholds</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.0</span><span class="p p-Indicator">]</span>
-</code></pre></div>
+<p><code>yaml
+/**:
+  ros__parameters:
+    class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
+    point_feature_size: 4
+    max_voxel_size: 40000
+    point_cloud_range: [-51.2, -51.2, -3.0, 51.2, 51.2, 5.0]
+    voxel_size: [0.2, 0.2, 8.0]
+    downsample_factor: 1
+    encoder_in_feature_size: 9
+    # post-process params
+    circle_nms_dist_threshold: 0.5
+    iou_nms_search_distance_2d: 10.0
+    iou_nms_threshold: 0.1
+    yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]</code></p>
 <h4 id="launch-the-lidar_centerpoint-node">Launch the lidar_centerpoint node<a class="headerlink" href="#launch-the-lidar_centerpoint-node" title="Permanent link">#</a></h4>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/YOUR/AUTOWARE/PATH/Autoware
-<span class="nb">source</span><span class="w"> </span>install/setup.bash
-ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w">  </span>model_name:<span class="o">=</span>centerpoint_custom<span class="w">  </span>model_path:<span class="o">=</span>/PATH/TO/ONNX/FILE/
-</code></pre></div>
+<p><code>bash
+cd /YOUR/AUTOWARE/PATH/Autoware
+source install/setup.bash
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml  model_name:=centerpoint_custom  model_path:=/PATH/TO/ONNX/FILE/</code></p>
 <h4 id="launch-the-lidar_short_range_centerpoint-node">Launch the lidar_short_range_centerpoint node<a class="headerlink" href="#launch-the-lidar_short_range_centerpoint-node" title="Permanent link">#</a></h4>
 <p>It also provides short_range detections using CenterPoint:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/YOUR/AUTOWARE/PATH/Autoware
-<span class="nb">source</span><span class="w"> </span>install/setup.bash
-ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_centerpoint<span class="w"> </span>lidar_centerpoint.launch.xml<span class="w"> </span>model_name:<span class="o">=</span>centerpoint_short_range<span class="w"> </span>model_path:<span class="o">=</span>/PATH/TO/ONNX/FILE/
-</code></pre></div>
+<p><code>bash
+cd /YOUR/AUTOWARE/PATH/Autoware
+source install/setup.bash
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_short_range model_path:=/PATH/TO/ONNX/FILE/</code></p>
 <h3 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h3>
 <h4 id="v1-20220706">v1 (2022/07/06)<a class="headerlink" href="#v1-20220706" title="Permanent link">#</a></h4>
 <table>
@@ -23696,13 +23609,13 @@ To inquire about a commercial license please contact <a href="mailto:nuscenes@mo
         
         
           
-          <a href="../autoware_lidar_frnet/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_lidar_frnet">
+          <a href="../autoware_lidar_frnet/" class="md-footer__link md-footer__link--next" aria-label="Next: Macro Rendering Error">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                autoware_lidar_frnet
+                Macro Rendering Error
               </div>
             </div>
             <div class="md-footer__button md-icon">

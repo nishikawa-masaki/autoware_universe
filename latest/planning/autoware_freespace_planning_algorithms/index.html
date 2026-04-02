@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22907,9 +22907,9 @@ better than RRT* for solution quality given the same computational time budget. 
 </ul>
 <h2 id="running-the-standalone-tests-and-visualization">Running the standalone tests and visualization<a class="headerlink" href="#running-the-standalone-tests-and-visualization" title="Permanent link">#</a></h2>
 <p>Building the package with ros-test and run tests:</p>
-<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span>build<span class="w"> </span>--packages-select<span class="w"> </span>autoware_freespace_planning_algorithms
-colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_freespace_planning_algorithms
-</code></pre></div>
+<p><code>sh
+colcon build --packages-select autoware_freespace_planning_algorithms
+colcon test --packages-select autoware_freespace_planning_algorithms</code></p>
 <!-- cspell: ignore fpalgos -->
 <!-- "fpalgos" means Free space Planning ALGOrithmS -->
 

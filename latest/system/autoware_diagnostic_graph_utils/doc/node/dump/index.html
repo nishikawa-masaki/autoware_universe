@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22897,17 +22897,18 @@
 <div><h1 id="dump-tool">Dump tool<a class="headerlink" href="#dump-tool" title="Permanent link">#</a></h1>
 <p>This tool displays <code>/diagnostics_graph</code> in table format.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_diagnostic_graph_utils<span class="w"> </span>dump_node
-</code></pre></div>
+<p><code>bash
+ros2 run autoware_diagnostic_graph_utils dump_node</code></p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h2>
 <p>Terminal 1:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>diagnostic_graph_aggregator<span class="w"> </span>example-main.launch.xml
-</code></pre></div>
+<p><code>bash
+ros2 launch diagnostic_graph_aggregator example-main.launch.xml</code></p>
 <p>Terminal 2:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>autoware_diagnostic_graph_utils<span class="w"> </span>dump_node
-</code></pre></div>
+<p><code>bash
+ros2 run autoware_diagnostic_graph_utils dump_node</code></p>
 <p>Output:</p>
-<div class="highlight"><pre><span></span><code>|----|-------|----------------------------------|------|----------|
+<p>```txt
+|----|-------|----------------------------------|------|----------|
 | No | Level | Path                             | Type | Children |
 |----|-------|----------------------------------|------|----------|
 |  1 | OK    | /autoware/modes/stop             | ok   |          |
@@ -22923,8 +22924,8 @@
 | 11 | OK    | /sensing/lidars/front            | diag |          |
 | 12 | OK    | /sensing/radars/front            | diag |          |
 | 13 | OK    | /external/joystick_command       | diag |          |
-| 14 | OK    | /external/remote_command         | diag |          |
-</code></pre></div></div>
+| 14 | OK    | /external/remote_command         | diag |          |</p>
+<p>```</p></div>
 
 
 
