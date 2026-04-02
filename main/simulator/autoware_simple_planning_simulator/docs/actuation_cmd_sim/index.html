@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22898,44 +22898,44 @@
 <h2 id="actuation_cmd">ACTUATION_CMD<a class="headerlink" href="#actuation_cmd" title="Permanent link">#</a></h2>
 <p>This model receives the accel/brake commands and converts them using the map to calculate the motion of the model. The steer command is used as it is.
 Please make sure that the raw_vehicle_cmd_converter is configured as follows.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">convert_accel_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">convert_brake_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">convert_steer_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</code></pre></div>
+<p><code>yaml
+convert_accel_cmd: true
+convert_brake_cmd: true
+convert_steer_cmd: false</code></p>
 <h2 id="actuation_cmd_steer_map">ACTUATION_CMD_STEER_MAP<a class="headerlink" href="#actuation_cmd_steer_map" title="Permanent link">#</a></h2>
 <p>This model is inherited from ACTUATION_CMD and receives steering arbitrary value as the actuation command.
 The value is converted to the steering tire rate to calculate the motion of the model. An arbitrary value is like EPS (Electric Power Steering) Voltage.</p>
 <p>Please make sure that the raw_vehicle_cmd_converter is configured as follows.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">convert_accel_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">convert_brake_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">convert_steer_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</code></pre></div>
+<p><code>yaml
+convert_accel_cmd: true
+convert_brake_cmd: true
+convert_steer_cmd: true</code></p>
 <h2 id="actuation_cmd_vgr">ACTUATION_CMD_VGR<a class="headerlink" href="#actuation_cmd_vgr" title="Permanent link">#</a></h2>
 <p>This model is inherited from ACTUATION_CMD and steering wheel angle is sent as the actuation command.
 The value is converted to the steering tire angle to calculate the motion of the model.</p>
 <p>Please make sure that the raw_vehicle_cmd_converter is configured as follows.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">convert_accel_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">convert_brake_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">convert_steer_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</code></pre></div>
+<p><code>yaml
+convert_accel_cmd: true
+convert_brake_cmd: true
+convert_steer_cmd: true</code></p>
 <p><img alt="vgr_sim" src="../../media/vgr_sim.drawio.svg"></p>
 <h2 id="actuation_cmd_mechanical">ACTUATION_CMD_MECHANICAL<a class="headerlink" href="#actuation_cmd_mechanical" title="Permanent link">#</a></h2>
 <p>This model is inherited from ACTUATION_CMD_VGR nad has mechanical dynamics and controller for that to simulate the mechanical structure and software of the real vehicle.</p>
 <p>Please make sure that the raw_vehicle_cmd_converter is configured as follows.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">convert_accel_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">convert_brake_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="nt">convert_steer_cmd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</code></pre></div>
+<p><code>yaml
+convert_accel_cmd: true
+convert_brake_cmd: true
+convert_steer_cmd: true</code></p>
 <p>The mechanical structure of the vehicle is as follows.</p>
 <p><img alt="mechanical_controller" src="../../media/mechanical_controller.drawio.svg"></p>
 <p>The vehicle side software assumes that it has limiters, PID controllers, power steering, etc. for the input.
 The conversion in the power steering is approximated by a polynomial.
 Steering Dynamics is a model that represents the motion of the tire angle when the Steering Torque is input. It is represented by the following formula.</p>
-<div class="highlight"><pre><span></span><code>\begin{align}
+<p><code>math
+\begin{align}
 \dot{\theta} &amp;= \omega \\
 \dot{\omega} &amp;= \frac{1}{I} (T_{\text{input}} - D \omega - K \theta - \text{sign}(\omega) F_{\text{friction}} ) \\
-\end{align}
-</code></pre></div>
+\end{align}</code></p>
 <p>In this case,</p>
 <ul>
 <li><span class="arithmatex">\(\theta\)</span> : Tire angle</li>

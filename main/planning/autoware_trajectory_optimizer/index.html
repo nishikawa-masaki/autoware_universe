@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22900,15 +22900,15 @@
 <p>The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from <code>TrajectoryOptimizerPluginBase</code> and is loaded via the ROS 2 pluginlib system.</p>
 <h3 id="plugin-loading-and-execution">Plugin Loading and Execution<a class="headerlink" href="#plugin-loading-and-execution" title="Permanent link">#</a></h3>
 <p>Plugins are loaded based on the <code>plugin_names</code> parameter, which defines both which plugins to load and their execution order:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">plugin_names</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryExtender"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</span>
-</code></pre></div>
+<p><code>yaml
+plugin_names:
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</code></p>
 <h3 id="available-plugins">Available Plugins<a class="headerlink" href="#available-plugins" title="Permanent link">#</a></h3>
 <ol>
 <li><strong>TrajectoryPointFixer</strong> - Removes invalid/repeated points and fixes trajectory direction</li>
@@ -23053,6 +23053,13 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 <td>float</td>
 <td>Minimum distance threshold for merging close proximity points [m]</td>
 <td>0.05</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_point_fixer.stop_detection_velocity_threshold_mps</td>
+<td>float</td>
+<td>Velocity threshold used by the stop-detection logic: points whose speed falls below this value while decelerating are treated as stop candidates by both the cluster-based and velocity-profile-based detectors [m/s]</td>
+<td>0.3</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -23451,13 +23458,14 @@ known limitations, see <a href="docs/trajectory_optimizer_specification/">docs/t
 </ol>
 <h3 id="configuring-plugin-order">Configuring Plugin Order<a class="headerlink" href="#configuring-plugin-order" title="Permanent link">#</a></h3>
 <p>To change plugin execution order, modify the <code>plugin_names</code> array in <code>config/trajectory_optimizer.param.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Example: Run spline smoother before velocity optimizer</span>
-<span class="nt">plugin_names</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</span>
-</code></pre></div>
+<p>```yaml</p>
+<h1 id="example-run-spline-smoother-before-velocity-optimizer">Example: Run spline smoother before velocity optimizer<a class="headerlink" href="#example-run-spline-smoother-before-velocity-optimizer" title="Permanent link">#</a></h1>
+<p>plugin_names:
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+```</p>
 <h4 id="critical-qp-smoother-ordering-constraint">CRITICAL: QP Smoother Ordering Constraint<a class="headerlink" href="#critical-qp-smoother-ordering-constraint" title="Permanent link">#</a></h4>
 <p>The <code>TrajectoryQPSmoother</code> plugin <strong>MUST run before</strong> any plugins that resample or modify trajectory structure:</p>
 <ul>

@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -23356,25 +23356,25 @@
 <h3 id="the-build_only-option">The <code>build_only</code> option<a class="headerlink" href="#the-build_only-option" title="Permanent link">#</a></h3>
 <p>The <code>autoware_lidar_transfusion</code> node has <code>build_only</code> option to build the TensorRT engine file from the ONNX file.
 Although it is preferred to move all the ROS parameters in <code>.param.yaml</code> file in Autoware Universe, the <code>build_only</code> option is not moved to the <code>.param.yaml</code> file for now, because it may be used as a flag to execute the build as a pre-task. You can execute with the following command:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_transfusion<span class="w"> </span>lidar_transfusion.launch.xml<span class="w"> </span>build_only:<span class="o">=</span><span class="nb">true</span>
-</code></pre></div>
+<p><code>bash
+ros2 launch autoware_lidar_transfusion lidar_transfusion.launch.xml build_only:=true</code></p>
 <h3 id="the-log_level-option">The <code>log_level</code> option<a class="headerlink" href="#the-log_level-option" title="Permanent link">#</a></h3>
 <p>The default logging severity level for <code>autoware_lidar_transfusion</code> is <code>info</code>. For debugging purposes, the developer may decrease severity level using <code>log_level</code> parameter:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_lidar_transfusion<span class="w"> </span>lidar_transfusion.launch.xml<span class="w"> </span>log_level:<span class="o">=</span>debug
-</code></pre></div>
+<p><code>bash
+ros2 launch autoware_lidar_transfusion lidar_transfusion.launch.xml log_level:=debug</code></p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>This library operates on raw cloud data (bytes). It is assumed that the input pointcloud message has following format:</p>
-<div class="highlight"><pre><span></span><code><span class="p">[</span>
-  <span class="n">sensor_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">PointField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">'x'</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-  <span class="n">sensor_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">PointField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">'y'</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-  <span class="n">sensor_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">PointField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">'z'</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-  <span class="n">sensor_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">PointField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">'intensity'</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="p">]</span>
-</code></pre></div>
+<p><code>python
+[
+  sensor_msgs.msg.PointField(name='x', offset=0, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='y', offset=4, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='z', offset=8, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='intensity', offset=12, datatype=2, count=1)
+]</code></p>
 <p>This input may consist of other fields as well - shown format is required minimum.
 For debug purposes, you can validate your pointcloud topic using simple command:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>&lt;input_topic&gt;<span class="w"> </span>--field<span class="w"> </span>fields
-</code></pre></div>
+<p><code>bash
+ros2 topic echo &lt;input_topic&gt; --field fields</code></p>
 <h2 id="trained-models">Trained Models<a class="headerlink" href="#trained-models" title="Permanent link">#</a></h2>
 <p>You can download the onnx format of trained models by clicking on the links below.</p>
 <ul>
@@ -23450,7 +23450,7 @@ Example:
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_lidar_frnet/" class="md-footer__link md-footer__link--prev" aria-label="Previous: autoware_lidar_frnet">
+          <a href="../autoware_lidar_frnet/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Macro Rendering Error">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23460,7 +23460,7 @@ Example:
                 Previous
               </span>
               <div class="md-ellipsis">
-                autoware_lidar_frnet
+                Macro Rendering Error
               </div>
             </div>
           </a>

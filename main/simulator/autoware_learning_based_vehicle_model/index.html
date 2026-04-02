@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22871,48 +22871,50 @@
 <!-- Required -->
 
 <p>To use this package <code>python3</code> and <code>pybind11</code> need to be installed. The only assumption on Python sub-models is their interface.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">PythonSubmodelInterface</span><span class="p">:</span>
+<p>```python
+class PythonSubmodelInterface:</p>
+<div class="codehilite"><pre><span></span><code>def forward(self, action, state):  # Required
+    """
+    Calculate forward pass through the model and returns next_state.
+    """
+    return list()
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>  <span class="c1"># Required</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Calculate forward pass through the model and returns next_state.</span>
-<span class="sd">        """</span>
-        <span class="k">return</span> <span class="nb">list</span><span class="p">()</span>
+def get_state_names(self):  # Required
+    """
+    Return list of string names of the model states (outputs).
+    """
+    return list()
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_state_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># Required</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return list of string names of the model states (outputs).</span>
-<span class="sd">        """</span>
-        <span class="k">return</span> <span class="nb">list</span><span class="p">()</span>
+def get_action_names(self):  # Required
+    """
+    Return list of string names of the model actions (inputs).
+    """
+    return list()
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_action_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># Required</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Return list of string names of the model actions (inputs).</span>
-<span class="sd">        """</span>
-        <span class="k">return</span> <span class="nb">list</span><span class="p">()</span>
+def reset(self):  # Required
+    """
+    Reset model. This function is called after load_params().
+    """
+    pass
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># Required</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Reset model. This function is called after load_params().</span>
-<span class="sd">        """</span>
-        <span class="k">pass</span>
+def load_params(self, path):  # Required
+    """
+    Load parameters of the model.
+    Inputs:
+        - path: Path to a parameter file to load by the model.
+    """
+    pass
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">load_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>  <span class="c1"># Required</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Load parameters of the model.</span>
-<span class="sd">        Inputs:</span>
-<span class="sd">            - path: Path to a parameter file to load by the model.</span>
-<span class="sd">        """</span>
-        <span class="k">pass</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">dtSet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>  <span class="c1"># Required</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Set dt of the model.</span>
-<span class="sd">        Inputs:</span>
-<span class="sd">            - dt: time step</span>
-<span class="sd">        """</span>
-        <span class="k">pass</span>
+def dtSet(self, dt):  # Required
+    """
+    Set dt of the model.
+    Inputs:
+        - dt: time step
+    """
+    pass
 </code></pre></div>
+
+<p>```</p>
 <h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">#</a></h2>
 <!-- Required -->
 <!-- Things to consider:
@@ -22980,48 +22982,41 @@
 </ul>
 <h3 id="example">Example<a class="headerlink" href="#example" title="Permanent link">#</a></h3>
 <p>Firstly we need to set up the model.</p>
-<div class="highlight"><pre><span></span><code><span class="n">InterconnectedModel</span><span class="w"> </span><span class="n">vehicle</span><span class="p">;</span>
-
-<span class="c1">// Example of model descriptors</span>
-<span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">model_descriptor_1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"path_to_python_module_with_model_class_1"</span><span class="p">,</span>
-<span class="w">    </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="k">nullptr</span><span class="p">,</span><span class="w">  </span><span class="c1">// If no param file is needed you can pass 'nullptr'</span>
-<span class="w">    </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"ModelClass1"</span>
-<span class="w">    </span><span class="p">};</span>
-
-<span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">model_descriptor_2</span><span class="w"> </span><span class="o">=</span><span class="w">   </span><span class="p">{</span>
-<span class="w">    </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"path_to_python_module_with_model_class_2"</span><span class="p">,</span>
-<span class="w">    </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"/path_to/param_file"</span><span class="p">,</span>
-<span class="w">    </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"ModelClass2"</span><span class="w">  </span><span class="c1">// Name of the python class. Needs to use the interface from 'Assumptions'</span>
-<span class="w">    </span><span class="p">};</span>
-
-<span class="c1">// Create sub-models based on descriptors</span>
-<span class="n">vehicle</span><span class="p">.</span><span class="n">addSubmodel</span><span class="p">(</span><span class="n">model_descriptor_1</span><span class="p">);</span>
-<span class="n">vehicle</span><span class="p">.</span><span class="n">addSubmodel</span><span class="p">(</span><span class="n">model_descriptor_2</span><span class="p">);</span>
-
-<span class="c1">// Define STATE and INPUT names of the system</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">state_names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"STATE_NAME_1"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"STATE_NAME_2"</span><span class="p">};</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">*&gt;</span><span class="w"> </span><span class="n">input_names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"INPUT_NAME_1"</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="s">"INPUT_NAME_2"</span><span class="p">};</span>
-
-<span class="c1">// Automatically connect sub-systems with model input</span>
-<span class="n">vehicle</span><span class="p">.</span><span class="n">generateConnections</span><span class="p">(</span><span class="n">input_names</span><span class="p">,</span><span class="w"> </span><span class="n">state_names</span><span class="p">);</span>
-
-<span class="c1">// Set the time step of the model</span>
-<span class="n">vehicle</span><span class="p">.</span><span class="n">dtSet</span><span class="p">(</span><span class="n">dt</span><span class="p">);</span>
-</code></pre></div>
+<p>```C++
+InterconnectedModel vehicle;</p>
+<p>// Example of model descriptors
+std::tuple<char*, char*, char*> model_descriptor_1 = {
+    (char<em>)"path_to_python_module_with_model_class_1",
+    (char</em>)nullptr,  // If no param file is needed you can pass 'nullptr'
+    (char*)"ModelClass1"
+    };</char*,></p>
+<p>std::tuple<char*, char*, char*> model_descriptor_2 =   {
+    (char<em>)"path_to_python_module_with_model_class_2",
+    (char</em>)"/path_to/param_file",
+    (char*)"ModelClass2"  // Name of the python class. Needs to use the interface from 'Assumptions'
+    };</char*,></p>
+<p>// Create sub-models based on descriptors
+vehicle.addSubmodel(model_descriptor_1);
+vehicle.addSubmodel(model_descriptor_2);</p>
+<p>// Define STATE and INPUT names of the system
+std::vector<char*> state_names = {(char<em>)"STATE_NAME_1", (char</em>)"STATE_NAME_2"};
+std::vector<char*> input_names = {(char<em>)"INPUT_NAME_1", (char</em>)"INPUT_NAME_2"};</char*></char*></p>
+<p>// Automatically connect sub-systems with model input
+vehicle.generateConnections(input_names, state_names);</p>
+<p>// Set the time step of the model
+vehicle.dtSet(dt);
+```</p>
 <p>After the model is correctly set up, we can use it the following way.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Example of an model input</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">vehicle_input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">};</span><span class="w"> </span><span class="c1">// INPUT_NAME_1, INPUT_NAME_2</span>
-
-<span class="c1">// Example of an model state</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">current_state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.5</span><span class="p">};</span><span class="w"> </span><span class="c1">// STATE_NAME_1, STATE_NAME_2</span>
-
-<span class="c1">// Set model state</span>
-<span class="n">vehicle</span><span class="p">.</span><span class="n">initState</span><span class="p">(</span><span class="n">current_state</span><span class="p">);</span>
-
-<span class="c1">// Calculate the next state of the model</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="w"> </span><span class="n">next_state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">vehicle</span><span class="p">.</span><span class="n">updatePyModel</span><span class="p">(</span><span class="n">vehicle_input</span><span class="p">);</span>
-</code></pre></div>
+<p>```C++
+// Example of an model input
+std::vector<double> vehicle_input = {0.0, 1.0}; // INPUT_NAME_1, INPUT_NAME_2</double></p>
+<p>// Example of an model state
+std::vector<double> current_state = {0.2, 0.5}; // STATE_NAME_1, STATE_NAME_2</double></p>
+<p>// Set model state
+vehicle.initState(current_state);</p>
+<p>// Calculate the next state of the model
+std::vector<double> next_state = vehicle.updatePyModel(vehicle_input);
+```</double></p>
 <h2 id="references-external-links">References / External links<a class="headerlink" href="#references-external-links" title="Permanent link">#</a></h2>
 <!-- Optional -->
 

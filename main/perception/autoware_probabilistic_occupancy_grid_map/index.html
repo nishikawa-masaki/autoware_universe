@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22926,17 +22926,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Test
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -23307,22 +23296,24 @@
 <ul>
 <li>pointcloud_based_occupancy_grid_map method</li>
 </ul>
-<div class="highlight"><pre><span></span><code><span class="c1"># downsampled raw and obstacle pointcloud</span>
-<span class="l l-Scalar l-Scalar-Plain">/perception/occupancy_grid_map/obstacle/downsample/pointcloud</span>
-<span class="l l-Scalar l-Scalar-Plain">/perception/occupancy_grid_map/raw/downsample/pointcloud</span>
-</code></pre></div>
+<p>```yaml</p>
+<h1 id="downsampled-raw-and-obstacle-pointcloud">downsampled raw and obstacle pointcloud<a class="headerlink" href="#downsampled-raw-and-obstacle-pointcloud" title="Permanent link">#</a></h1>
+<p>/perception/occupancy_grid_map/obstacle/downsample/pointcloud
+/perception/occupancy_grid_map/raw/downsample/pointcloud
+```</p>
 <ul>
 <li>multi_lidar_pointcloud_based_point_cloud</li>
 </ul>
-<div class="highlight"><pre><span></span><code><span class="c1"># downsampled raw and obstacle pointcloud</span>
-<span class="l l-Scalar l-Scalar-Plain">/perception/occupancy_grid_map/obstacle/downsample/pointcloud</span>
-<span class="l l-Scalar l-Scalar-Plain">/perception/occupancy_grid_map/&lt;sensor_name&gt;/raw/downsample/pointcloud</span>
-</code></pre></div>
+<p>```yaml</p>
+<h1 id="downsampled-raw-and-obstacle-pointcloud_1">downsampled raw and obstacle pointcloud<a class="headerlink" href="#downsampled-raw-and-obstacle-pointcloud_1" title="Permanent link">#</a></h1>
+<p>/perception/occupancy_grid_map/obstacle/downsample/pointcloud
+/perception/occupancy_grid_map/<sensor_name>/raw/downsample/pointcloud
+```</sensor_name></p>
 <h3 id="test">Test<a class="headerlink" href="#test" title="Permanent link">#</a></h3>
 <p>This package provides unit tests using <code>gtest</code>.
 You can run the test by the following command.</p>
-<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_probabilistic_occupancy_grid_map<span class="w"> </span>--event-handlers<span class="w"> </span>console_direct+
-</code></pre></div>
+<p><code>bash
+colcon test --packages-select autoware_probabilistic_occupancy_grid_map --event-handlers console_direct+</code></p>
 <p>Test contains the following.</p>
 <ul>
 <li>Unit test for cost value conversion function</li>

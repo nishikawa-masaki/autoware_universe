@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -22923,15 +22923,15 @@ the QP solver will silently compute wrong velocities and accelerations.</p>
 <h2 id="how-velocity-and-acceleration-are-computed">How Velocity and Acceleration Are Computed<a class="headerlink" href="#how-velocity-and-acceleration-are-computed" title="Permanent link">#</a></h2>
 <p>After the QP smoother adjusts point positions, the output kinematics are derived as follows:</p>
 <p><strong>Velocity</strong> (second pass, <code>post_process_trajectory</code>):</p>
-<div class="highlight"><pre><span></span><code>v[i] = || p[i] - p[i-1] || / dt        (for i &gt;= 1)
-v[0] = input_trajectory[0].longitudinal_velocity_mps   (copied from input before smoothing)
-</code></pre></div>
+<p><code>text
+v[i] = || p[i] - p[i-1] || / dt        (for i &gt;= 1)
+v[0] = input_trajectory[0].longitudinal_velocity_mps   (copied from input before smoothing)</code></p>
 <p>A 3-point moving average is then applied starting at index 0, which overwrites v[0] with
 <code>(v_input[0] + v_geom[1] + v_geom[2]) / 3</code>. v[0] is therefore not purely preserved - it is
 blended with the geometric velocities of the next two points.</p>
 <p><strong>Acceleration</strong> (fourth pass, <code>recalculate_longitudinal_acceleration</code>):</p>
-<div class="highlight"><pre><span></span><code>a[i] = (v[i+1] - v[i]) / dt
-</code></pre></div>
+<p><code>text
+a[i] = (v[i+1] - v[i]) / dt</code></p>
 <p>The last point gets <code>0.0</code> (explicitly zeroed).</p>
 <p><strong>Consequences:</strong></p>
 <ul>
@@ -22949,7 +22949,8 @@ blended with the geometric velocities of the next two points.</p>
 <h3 id="default-pipeline">Default Pipeline<a class="headerlink" href="#default-pipeline" title="Permanent link">#</a></h3>
 <p>The full <code>plugin_names</code> list (from <code>config/trajectory_optimizer.param.yaml</code>) and each plugin's
 enabled state:</p>
-<div class="highlight"><pre><span></span><code>TrajectoryPointFixer                      [ON]
+<p><code>text
+TrajectoryPointFixer                      [ON]
 TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- first pass, before QP
 TrajectoryQPSmoother                      [ON]
 TrajectoryKinematicFeasibilityEnforcer    [ON]   &lt;- second pass, after QP
@@ -22957,21 +22958,36 @@ TrajectoryEBSmootherOptimizer             [OFF]
 TrajectorySplineSmoother                  [ON]
 TrajectoryMPTOptimizer                    [OFF]
 TrajectoryVelocityOptimizer               [ON]
-TrajectoryExtender                        [OFF]
-</code></pre></div>
+TrajectoryExtender                        [OFF]</code></p>
 <p>Note that <code>TrajectoryKinematicFeasibilityEnforcer</code> is listed twice in <code>plugin_names</code> and runs
 both before and after the QP smoother. Each pass is a separate plugin instance operating
 independently.</p>
 <h3 id="plugin-descriptions">Plugin Descriptions<a class="headerlink" href="#plugin-descriptions" title="Permanent link">#</a></h3>
 <h4 id="trajectorypointfixer-enabled">TrajectoryPointFixer (enabled)<a class="headerlink" href="#trajectorypointfixer-enabled" title="Permanent link">#</a></h4>
 <p>Removes duplicate or numerically degenerate points (zero-distance, NaN positions). Optionally
-resamples points that are too close together. Runs at the start of the pipeline.</p>
+resamples closely-spaced points. Also runs stop-approach detection and populates the shared
+<code>SemanticSpeedTracker</code> for use by downstream plugins.</p>
 <p>Does not modify velocities or time stamps.</p>
+<p><strong>Stop-approach detection:</strong> Points that are much closer together than normal represent a stop
+zone. With a constant <code>dt</code>, <code>v = ds/dt</code> approaches zero as <code>ds</code> approaches zero, so geometric
+proximity IS a reliable stop indicator. Detection runs in three stages:</p>
+<ol>
+<li><code>remove_close_proximity_points</code>: marks points that are geometric near-duplicates (<code>ds &lt;
+min_dist_to_remove_m</code>) as stop candidates.</li>
+<li><code>resample_close_proximity_points</code>: resamples clusters of closely-spaced points and marks the
+   cluster endpoint as a stop candidate if the speed is decreasing.</li>
+<li><code>build_stop_approach_ranges</code>: processes all candidates, confirms speed is decreasing toward
+   the candidate (not increasing — that would be a take-off), traces back the deceleration onset,
+   and stores the resulting range in <code>SemanticSpeedTracker.slow_down_ranges</code>.</li>
+</ol>
+<p>If no candidates produce valid stop approach ranges, a velocity-profile scan
+(<code>detect_velocity_based_stop</code>) is run as a fallback for constant-spacing trajectories where no
+geometric clusters exist.</p>
 <h4 id="trajectorykinematicfeasibilityenforcer-enabled-runs-twice">TrajectoryKinematicFeasibilityEnforcer (enabled, runs twice)<a class="headerlink" href="#trajectorykinematicfeasibilityenforcer-enabled-runs-twice" title="Permanent link">#</a></h4>
 <p>Forward-propagating filter that clamps heading changes at each trajectory segment to respect
 Ackermann steering geometry and a maximum yaw rate limit. At each step:</p>
-<div class="highlight"><pre><span></span><code>delta_psi_max = min(kappa_max * s, psi_dot_max * avg_dt)
-</code></pre></div>
+<p><code>text
+delta_psi_max = min(kappa_max * s, psi_dot_max * avg_dt)</code></p>
 <p>where <code>kappa_max = tan(delta_max) / L</code>, <code>s</code> is the segment arc length, and <code>avg_dt</code> is a single
 average time step computed from all <code>time_from_start</code> deltas in the input trajectory (fallback:
 0.1 s). The same <code>avg_dt</code> is used for every segment - per-segment dt is not recomputed from
@@ -22987,12 +23003,16 @@ first.</p>
 (<code>||p[i+1] - 2*p[i] + p[i-1]||^2 / dt^2</code>) while penalizing deviation from the input path.</p>
 <p>Decision variables: <code>[x_0, y_0, ..., x_{N-1}, y_{N-1}]</code> - positions only.</p>
 <p>Hard constraints: the first <code>num_constrained_points_start</code> and last <code>num_constrained_points_end</code>
-points are fixed to their input positions (defaults: start = 3, end = 0). Only the start anchor
-is active by default, keeping the trajectory pinned at the ego vehicle's immediate vicinity.</p>
+points are fixed to their input positions (defaults: start = 3, end = 0). Additionally, any
+stop points detected by <code>TrajectoryPointFixer</code> (via <code>SemanticSpeedTracker</code>) are added as hard
+equality constraints, pinning their positions regardless of smoothness weight.</p>
 <p>After solving, velocities and accelerations are recomputed from the smoothed positions as
-described above. Orientations are recalculated from the smoothed path geometry. Optionally,
-orientations can instead be copied from the original input trajectory via nearest-neighbor
-matching (<code>preserve_input_trajectory_orientation</code>), but this is <strong>disabled by default</strong>.</p>
+described above. For points within detected stop approach ranges, the planner's original velocity
+profile is restored after the moving average step, preserving the intended deceleration curve.
+The stop point itself is forced to zero velocity unconditionally. Orientations are recalculated
+from the smoothed path geometry. Optionally, orientations can instead be copied from the original
+input trajectory via nearest-neighbor matching (<code>preserve_input_trajectory_orientation</code>), but
+this is <strong>disabled by default</strong>.</p>
 <p><strong>The QP smoother must run before any plugin that resamples the trajectory.</strong> Resampling
 (changing the number of points or their spacing in arc length) breaks the constant-dt assumption
 and invalidates the curvature penalty scaling.</p>
@@ -23106,8 +23126,8 @@ output. Each output point corresponds directly to an input point. Deviations are
 bounded by the fidelity weight.</p>
 <p>Arc-length resampling also has a concrete technical incompatibility with the QP smoother. The
 curvature penalty term:</p>
-<div class="highlight"><pre><span></span><code>J_smooth = weight_smoothness / dt^2 * sum || p[i+1] - 2*p[i] + p[i-1] ||^2
-</code></pre></div>
+<p><code>text
+J_smooth = weight_smoothness / dt^2 * sum || p[i+1] - 2*p[i] + p[i-1] ||^2</code></p>
 <p>is a second-order finite difference approximation of acceleration, valid only when consecutive
 points are separated by a constant time interval <code>dt</code>. After arc-length resampling, points are
 separated by a constant spatial interval <code>ds</code> instead. The QP smoother has no way to detect
@@ -23122,8 +23142,8 @@ Any plugin that arc-length resamples before the QP smoother has no place in this
 <h2 id="orientation-handling">Orientation Handling<a class="headerlink" href="#orientation-handling" title="Permanent link">#</a></h2>
 <p>Orientations are not optimized directly by any plugin. They are recomputed from path geometry
 after position changes:</p>
-<div class="highlight"><pre><span></span><code>yaw[i] = atan2(y[i+1] - y[i], x[i+1] - x[i])
-</code></pre></div>
+<p><code>text
+yaw[i] = atan2(y[i+1] - y[i], x[i+1] - x[i])</code></p>
 <p>Both the QP smoother and the spline smoother offer <code>preserve_input_trajectory_orientation</code>, which
 copies orientations from the original input via nearest-neighbor matching instead of computing
 them from the smoothed geometry. This option is <strong>disabled by default in both plugins</strong>, so
@@ -23138,10 +23158,11 @@ acceptable.</p>
 <h2 id="known-limitations">Known Limitations<a class="headerlink" href="#known-limitations" title="Permanent link">#</a></h2>
 <ol>
 <li>
-<p><strong>Stop velocities are overwritten by the QP smoother.</strong> If the upstream planner encodes a stop
-   by setting <code>longitudinal_velocity_mps = 0</code> at a specific point, that value is lost after QP
-   smoothing. The velocity optimizer does not know about intended stop points. Stop behavior must
-   be handled by a separate mechanism or enforced upstream of this node.</p>
+<p><strong>Stop velocity preservation depends on detection.</strong> Stop points are detected from geometric
+   proximity (<code>ds &lt; min_dist_to_remove_m</code>) and velocity profile. If a planner encodes a stop
+   zone with point spacings above the detection threshold and no near-zero velocities below
+   <code>stop_detection_velocity_threshold_mps</code>, the stop will not be detected and the QP smoother
+   will overwrite the velocity profile as normal.</p>
 </li>
 <li>
 <p><strong>Constant-dt is broken at the pipeline end.</strong> The spline smoother as the last geometric step
@@ -23156,11 +23177,11 @@ acceptable.</p>
    ran earlier), the QP smoother will produce incorrect velocities without warning.</p>
 </li>
 <li>
-<p><strong>No velocity value from the input is fully preserved.</strong> The QP smoother copies
-   <code>input_trajectory[0].longitudinal_velocity_mps</code> to <code>output_trajectory[0]</code> before the moving
-   average, but the moving average immediately overwrites it with
-   <code>(v_input[0] + v_geom[1] + v_geom[2]) / 3</code>. Every velocity in the output is therefore a
-   function of smoothed geometry, not the planner's intent.</p>
+<p><strong>Velocities outside detected stop zones are geometric.</strong> For points not in a detected stop
+   approach range, velocities are recomputed from position differences and blended through a
+   3-point moving average. The planner's velocity values are not preserved there. For detected
+   stop approach zones, the planner's original velocity profile is restored after the moving
+   average and the stop point is forced to zero (see TrajectoryQPSmoother section).</p>
 </li>
 <li>
 <p><strong>Trajectory extender discontinuity is unresolved.</strong> The history-based backward extension
