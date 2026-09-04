@@ -44,6 +44,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <regex>
 #include <string>
@@ -53,6 +54,46 @@
 namespace
 {
 constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+
+std::string resolve_block_device_path(const std::string & device)
+{
+  if (device.empty()) {
+    return {};
+  }
+
+  std::error_code ec;
+  const auto canonical = std::filesystem::weakly_canonical(device, ec);
+  if (ec || canonical.empty()) {
+    return device;
+  }
+
+  const auto resolved = canonical.string();
+  if (resolved.rfind("/dev/dm-", 0) != 0) {
+    return resolved;
+  }
+
+  const auto block_name = std::filesystem::path(resolved).filename().string();
+  const auto slaves_dir = std::filesystem::path("/sys/class/block") / block_name / "slaves";
+  std::error_code slaves_ec;
+  if (!std::filesystem::exists(slaves_dir, slaves_ec) ||
+      !std::filesystem::is_directory(slaves_dir, slaves_ec))
+  {
+    return resolved;
+  }
+
+  for (const auto & entry : std::filesystem::directory_iterator(slaves_dir, slaves_ec)) {
+    if (slaves_ec) {
+      break;
+    }
+
+    const auto name = entry.path().filename().string();
+    if (!name.empty()) {
+      return "/dev/" + name;
+    }
+  }
+
+  return resolved;
+}
 }  // namespace
 
 /**
@@ -432,9 +473,12 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
 
   for (auto & hdd_device : hdd_devices) {
     HddInfo info{};
+    const auto resolved_name = resolve_block_device_path(hdd_device.name_);
+    const auto open_name = resolved_name.empty() ? hdd_device.name_ : resolved_name;
 
-    // Open a file
-    int fd = open(hdd_device.name_.c_str(), O_RDONLY);
+    // Open a file using the normalized device path. This keeps the symlink / mapper resolution
+    // inside the reader, where the actual SMART access occurs.
+    int fd = open(open_name.c_str(), O_RDONLY);
     if (fd < 0) {
       info.error_code_ = errno;
       syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
@@ -442,7 +486,7 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
     }
 
     // AHCI device
-    if (boost::starts_with(hdd_device.name_.c_str(), "/dev/sd")) {
+    if (boost::starts_with(open_name.c_str(), "/dev/sd")) {
       // Get IDENTIFY DEVICE for ATA drive
       info.error_code_ = get_ata_identify(fd, &info);
       if (info.error_code_ != 0) {
@@ -458,7 +502,7 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
         close(fd);
         continue;
       }
-    } else if (boost::starts_with(hdd_device.name_.c_str(), "/dev/nvme")) {  // NVMe device
+    } else if (boost::starts_with(open_name.c_str(), "/dev/nvme")) {  // NVMe device
       // Get Identify for NVMe drive
       info.error_code_ = get_nvme_identify(fd, &info);
       if (info.error_code_ != 0) {
@@ -485,6 +529,9 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
     }
 
     list[hdd_device.name_] = info;
+    if (!resolved_name.empty() && resolved_name != hdd_device.name_) {
+      list[resolved_name] = info;
+    }
   }
 
   oa << list;
