@@ -522,8 +522,8 @@ int unmount_device_with_lazy(boost::archive::text_iarchive & ia, boost::archive:
     }
 
     boost::process::child c(
-      "/usr/bin/umount", "-l", unmount_device.part_device_.c_str(), boost::process::std_out > is_out,
-      boost::process::std_err > is_err);
+      "/usr/bin/umount", "-l", unmount_device.part_device_.c_str(),
+      boost::process::std_out > is_out, boost::process::std_err > is_err);
     c.wait();
 
     if (c.exit_code() != 0) {
