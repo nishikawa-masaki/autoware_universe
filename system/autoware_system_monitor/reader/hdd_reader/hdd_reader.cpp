@@ -75,9 +75,9 @@ std::string resolve_block_device_path(const std::string & device)
   const auto block_name = std::filesystem::path(resolved).filename().string();
   const auto slaves_dir = std::filesystem::path("/sys/class/block") / block_name / "slaves";
   std::error_code slaves_ec;
-  if (!std::filesystem::exists(slaves_dir, slaves_ec) ||
-      !std::filesystem::is_directory(slaves_dir, slaves_ec))
-  {
+  if (
+    !std::filesystem::exists(slaves_dir, slaves_ec) ||
+    !std::filesystem::is_directory(slaves_dir, slaves_ec)) {
     return resolved;
   }
 

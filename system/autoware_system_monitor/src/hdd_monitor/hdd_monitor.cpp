@@ -67,8 +67,7 @@ std::string unescape_mount_field(const std::string & escaped)
     if (
       escaped[i] == '\\' && i + 3 < escaped.size() && escaped[i + 1] >= '0' &&
       escaped[i + 1] <= '7' && escaped[i + 2] >= '0' && escaped[i + 2] <= '7' &&
-      escaped[i + 3] >= '0' && escaped[i + 3] <= '7')
-    {
+      escaped[i + 3] >= '0' && escaped[i + 3] <= '7') {
       const char ch = static_cast<char>(
         (escaped[i + 1] - '0') * 64 + (escaped[i + 2] - '0') * 8 + (escaped[i + 3] - '0'));
       unescaped.push_back(ch);
