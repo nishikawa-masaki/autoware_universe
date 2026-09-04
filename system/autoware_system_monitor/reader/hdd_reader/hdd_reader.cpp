@@ -94,6 +94,73 @@ std::string resolve_block_device_path(const std::string & device)
 
   return resolved;
 }
+
+HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
+{
+  info->error_code_ = get_ata_identify(fd, info);
+  if (info->error_code_ != 0) {
+    syslog(LOG_ERR, "Failed to get IDENTIFY DEVICE for ATA drive. %s\n", strerror(info->error_code_));
+    return *info;
+  }
+
+  info->error_code_ = get_ata_smart_data(fd, info, hdd_device);
+  if (info->error_code_ != 0) {
+    syslog(LOG_ERR, "Failed to get SMART LOG for ATA drive. %s\n", strerror(info->error_code_));
+    return *info;
+  }
+
+  return *info;
+}
+
+HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
+{
+  info->error_code_ = get_nvme_identify(fd, info);
+  if (info->error_code_ != 0) {
+    syslog(LOG_ERR, "Failed to get Identify for NVMe drive. %s\n", strerror(info->error_code_));
+    return *info;
+  }
+
+  info->error_code_ = get_nvme_smart_data(fd, info);
+  if (info->error_code_ != 0) {
+    syslog(
+      LOG_ERR, "Failed to get SMART / Health Information for NVMe drive. %s\n",
+      strerror(info->error_code_));
+    return *info;
+  }
+
+  return *info;
+}
+
+HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
+{
+  HddInfo info{};
+  const auto resolved_name = resolve_block_device_path(hdd_device.name_);
+  const auto open_name = resolved_name.empty() ? hdd_device.name_ : resolved_name;
+
+  int fd = open(open_name.c_str(), O_RDONLY);
+  if (fd < 0) {
+    info.error_code_ = errno;
+    syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
+    return info;
+  }
+
+  const bool is_ata = boost::starts_with(open_name, "/dev/sd");
+  const bool is_nvme = boost::starts_with(open_name, "/dev/nvme");
+
+  if (is_ata) {
+    info = read_ata_hdd_info(fd, &info, hdd_device);
+  } else if (is_nvme) {
+    info = read_nvme_hdd_info(fd, &info);
+  }
+
+  info.error_code_ = close(fd);
+  if (info.error_code_ < 0) {
+    info.error_code_ = errno;
+    syslog(LOG_ERR, "Failed to close the file descriptor FD. %s\n", strerror(info.error_code_));
+  }
+
+  return info;
+}
 }  // namespace
 
 /**
@@ -472,61 +539,8 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
   }
 
   for (auto & hdd_device : hdd_devices) {
-    HddInfo info{};
     const auto resolved_name = resolve_block_device_path(hdd_device.name_);
-    const auto open_name = resolved_name.empty() ? hdd_device.name_ : resolved_name;
-
-    // Open a file using the normalized device path. This keeps the symlink / mapper resolution
-    // inside the reader, where the actual SMART access occurs.
-    int fd = open(open_name.c_str(), O_RDONLY);
-    if (fd < 0) {
-      info.error_code_ = errno;
-      syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
-      continue;
-    }
-
-    // AHCI device
-    if (boost::starts_with(open_name.c_str(), "/dev/sd")) {
-      // Get IDENTIFY DEVICE for ATA drive
-      info.error_code_ = get_ata_identify(fd, &info);
-      if (info.error_code_ != 0) {
-        syslog(
-          LOG_ERR, "Failed to get IDENTIFY DEVICE for ATA drive. %s\n", strerror(info.error_code_));
-        close(fd);
-        continue;
-      }
-      // Get SMART DATA for ATA drive
-      info.error_code_ = get_ata_smart_data(fd, &info, hdd_device);
-      if (info.error_code_ != 0) {
-        syslog(LOG_ERR, "Failed to get SMART LOG for ATA drive. %s\n", strerror(info.error_code_));
-        close(fd);
-        continue;
-      }
-    } else if (boost::starts_with(open_name.c_str(), "/dev/nvme")) {  // NVMe device
-      // Get Identify for NVMe drive
-      info.error_code_ = get_nvme_identify(fd, &info);
-      if (info.error_code_ != 0) {
-        syslog(LOG_ERR, "Failed to get Identify for NVMe drive. %s\n", strerror(info.error_code_));
-        close(fd);
-        continue;
-      }
-      // Get SMART / Health Information for NVMe drive
-      info.error_code_ = get_nvme_smart_data(fd, &info);
-      if (info.error_code_ != 0) {
-        syslog(
-          LOG_ERR, "Failed to get SMART / Health Information for NVMe drive. %s\n",
-          strerror(info.error_code_));
-        close(fd);
-        continue;
-      }
-    }
-
-    // Close the file descriptor FD
-    info.error_code_ = close(fd);
-    if (info.error_code_ < 0) {
-      info.error_code_ = errno;
-      syslog(LOG_ERR, "Failed to close the file descriptor FD. %s\n", strerror(info.error_code_));
-    }
+    HddInfo info = read_hdd_info_for_device(hdd_device);
 
     list[hdd_device.name_] = info;
     if (!resolved_name.empty() && resolved_name != hdd_device.name_) {
