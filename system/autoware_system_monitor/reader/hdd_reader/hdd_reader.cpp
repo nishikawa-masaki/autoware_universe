@@ -99,7 +99,8 @@ HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
 {
   info->error_code_ = get_ata_identify(fd, info);
   if (info->error_code_ != 0) {
-    syslog(LOG_ERR, "Failed to get IDENTIFY DEVICE for ATA drive. %s\n", strerror(info->error_code_));
+    syslog(
+      LOG_ERR, "Failed to get IDENTIFY DEVICE for ATA drive. %s\n", strerror(info->error_code_));
     return *info;
   }
 
