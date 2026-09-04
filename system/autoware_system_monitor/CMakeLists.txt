@@ -244,7 +244,7 @@ if(BUILD_TESTING)
     PRIVATE "include"
   )
 
-  target_link_libraries(test_hdd_reader hdd_reader ${Boost_LIBRARIES} ${LIBRARIES})
+  target_link_libraries(test_hdd_reader ${Boost_LIBRARIES} ${LIBRARIES})
 
   # helper free command to failed free command.
   add_executable(free1 test/src/mem_monitor/free1.cpp)

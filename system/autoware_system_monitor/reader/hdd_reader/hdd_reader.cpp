@@ -53,42 +53,7 @@
 namespace
 {
 constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
-
-bool is_valid_base_device_name(const std::string & value)
-{
-  if (value.empty()) {
-    return false;
-  }
-
-  if (value.rfind("/dev/", 0) != 0) {
-    return false;
-  }
-
-  const std::string forbidden_chars = ";|&<>$`\\\n\r\t \"'";
-  if (value.find_first_of(forbidden_chars) != std::string::npos) {
-    return false;
-  }
-
-  return true;
-}
-
 }  // namespace
-
-bool validate_unmount_device_name(const std::string & part_device)
-{
-  if (!is_valid_base_device_name(part_device)) {
-    return false;
-  }
-
-  // Allow typical block device nodes and encrypted LUKS/dm mappings but reject shell
-  // metacharacters and non-device paths.
-  return boost::starts_with(part_device, "/dev/") &&
-         (boost::starts_with(part_device, "/dev/sd") ||
-          boost::starts_with(part_device, "/dev/nvme") ||
-          boost::starts_with(part_device, "/dev/mmcblk") ||
-          boost::starts_with(part_device, "/dev/mapper/") ||
-          boost::starts_with(part_device, "/dev/dm-"));
-}
 
 /**
  * @brief ATA PASS-THROUGH (12) command
