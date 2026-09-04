@@ -45,6 +45,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <iostream>
 #include <regex>
 #include <string>
@@ -95,40 +96,39 @@ std::string resolve_block_device_path(const std::string & device)
   return resolved;
 }
 
-HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
+HddInfo read_hdd_info_in_sequence(
+  HddInfo * info, const char * first_error_message, const char * second_error_message,
+  const std::function<int()> & first_step, const std::function<int()> & second_step)
 {
-  info->error_code_ = get_ata_identify(fd, info);
+  info->error_code_ = first_step();
   if (info->error_code_ != 0) {
-    syslog(LOG_ERR, "Failed to get IDENTIFY DEVICE for ATA drive. %s\n", strerror(info->error_code_));
+    syslog(LOG_ERR, "%s. %s\n", first_error_message, strerror(info->error_code_));
     return *info;
   }
 
-  info->error_code_ = get_ata_smart_data(fd, info, hdd_device);
+  info->error_code_ = second_step();
   if (info->error_code_ != 0) {
-    syslog(LOG_ERR, "Failed to get SMART LOG for ATA drive. %s\n", strerror(info->error_code_));
+    syslog(LOG_ERR, "%s. %s\n", second_error_message, strerror(info->error_code_));
     return *info;
   }
 
   return *info;
 }
 
+HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
+{
+  return read_hdd_info_in_sequence(
+    info, "Failed to get IDENTIFY DEVICE for ATA drive", "Failed to get SMART LOG for ATA drive",
+    [&]() { return get_ata_identify(fd, info); },
+    [&]() { return get_ata_smart_data(fd, info, hdd_device); });
+}
+
 HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
 {
-  info->error_code_ = get_nvme_identify(fd, info);
-  if (info->error_code_ != 0) {
-    syslog(LOG_ERR, "Failed to get Identify for NVMe drive. %s\n", strerror(info->error_code_));
-    return *info;
-  }
-
-  info->error_code_ = get_nvme_smart_data(fd, info);
-  if (info->error_code_ != 0) {
-    syslog(
-      LOG_ERR, "Failed to get SMART / Health Information for NVMe drive. %s\n",
-      strerror(info->error_code_));
-    return *info;
-  }
-
-  return *info;
+  return read_hdd_info_in_sequence(
+    info, "Failed to get Identify for NVMe drive",
+    "Failed to get SMART / Health Information for NVMe drive",
+    [&]() { return get_nvme_identify(fd, info); }, [&]() { return get_nvme_smart_data(fd, info); });
 }
 
 HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
