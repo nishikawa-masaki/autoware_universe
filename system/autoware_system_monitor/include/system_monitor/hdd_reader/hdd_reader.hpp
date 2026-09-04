@@ -135,4 +135,6 @@ struct UnmountDeviceInfo
  */
 typedef std::map<std::string, HddInfo> HddInfoList;
 
+bool validate_unmount_device_name(const std::string & part_device);
+
 #endif  // SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_

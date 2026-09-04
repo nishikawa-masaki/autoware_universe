@@ -53,7 +53,42 @@
 namespace
 {
 constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+
+bool is_valid_base_device_name(const std::string & value)
+{
+  if (value.empty()) {
+    return false;
+  }
+
+  if (value.rfind("/dev/", 0) != 0) {
+    return false;
+  }
+
+  const std::string forbidden_chars = ";|&<>$`\\\n\r\t \"'";
+  if (value.find_first_of(forbidden_chars) != std::string::npos) {
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace
+
+bool validate_unmount_device_name(const std::string & part_device)
+{
+  if (!is_valid_base_device_name(part_device)) {
+    return false;
+  }
+
+  // Allow typical block device nodes and encrypted LUKS/dm mappings but reject shell
+  // metacharacters and non-device paths.
+  return boost::starts_with(part_device, "/dev/") &&
+         (boost::starts_with(part_device, "/dev/sd") ||
+          boost::starts_with(part_device, "/dev/nvme") ||
+          boost::starts_with(part_device, "/dev/mmcblk") ||
+          boost::starts_with(part_device, "/dev/mapper/") ||
+          boost::starts_with(part_device, "/dev/dm-"));
+}
 
 /**
  * @brief ATA PASS-THROUGH (12) command
@@ -514,9 +549,16 @@ int unmount_device_with_lazy(boost::archive::text_iarchive & ia, boost::archive:
     boost::process::ipstream is_out;
     boost::process::ipstream is_err;
 
+    if (!validate_unmount_device_name(unmount_device.part_device_)) {
+      syslog(LOG_ERR, "Invalid mount device path. %s\n", unmount_device.part_device_.c_str());
+      ret = -1;
+      responses.push_back(ret);
+      continue;
+    }
+
     boost::process::child c(
-      "/bin/sh", "-c", fmt::format("umount -l {}", unmount_device.part_device_.c_str()),
-      boost::process::std_out > is_out, boost::process::std_err > is_err);
+      "/usr/bin/umount", "-l", unmount_device.part_device_.c_str(), boost::process::std_out > is_out,
+      boost::process::std_err > is_err);
     c.wait();
 
     if (c.exit_code() != 0) {
