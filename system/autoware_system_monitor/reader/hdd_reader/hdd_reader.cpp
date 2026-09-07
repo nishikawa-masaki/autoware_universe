@@ -455,8 +455,7 @@ int get_nvme_smart_data(const ReadContext & ctx, HddInfo * info)
 }
 
 HddInfo read_hdd_info_in_sequence(
-  HddInfo * info, const std::function<int()> & first_step,
-  const std::function<int()> & second_step)
+  HddInfo * info, const std::function<int()> & first_step, const std::function<int()> & second_step)
 {
   info->error_code_ = first_step();
   if (info->error_code_ != 0) {
@@ -477,13 +476,8 @@ HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
   const ReadContext get_data_context{fd, "Failed to get SMART LOG for ATA drive"};
 
   return read_hdd_info_in_sequence(
-    info,
-    [&]() {
-      return get_ata_identity(identify_context, info);
-    },
-    [&]() {
-      return get_ata_smart_data(get_data_context, info, hdd_device);
-    });
+    info, [&]() { return get_ata_identity(identify_context, info); },
+    [&]() { return get_ata_smart_data(get_data_context, info, hdd_device); });
 }
 
 HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
@@ -492,13 +486,8 @@ HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
   const ReadContext get_data_context{fd, "Failed to get SMART / Health Information for NVMe drive"};
 
   return read_hdd_info_in_sequence(
-    info,
-    [&]() {
-      return get_nvme_identity(identify_context, info);
-    },
-    [&]() {
-      return get_nvme_smart_data(get_data_context, info);
-    });
+    info, [&]() { return get_nvme_identity(identify_context, info); },
+    [&]() { return get_nvme_smart_data(get_data_context, info); });
 }
 
 HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
