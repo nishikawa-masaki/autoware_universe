@@ -115,181 +115,6 @@ HddInfo read_hdd_info_in_sequence(
   return *info;
 }
 
-HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
-{
-  return read_hdd_info_in_sequence(
-    info, "Failed to get IDENTIFY DEVICE for ATA drive", "Failed to get SMART LOG for ATA drive",
-    [&]() { return get_ata_identify(fd, info); },
-    [&]() { return get_ata_smart_data(fd, info, hdd_device); });
-}
-
-HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
-{
-  return read_hdd_info_in_sequence(
-    info, "Failed to get Identify for NVMe drive",
-    "Failed to get SMART / Health Information for NVMe drive",
-    [&]() { return get_nvme_identify(fd, info); }, [&]() { return get_nvme_smart_data(fd, info); });
-}
-
-HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
-{
-  HddInfo info{};
-  const auto resolved_name = resolve_block_device_path(hdd_device.name_);
-  const auto open_name = resolved_name.empty() ? hdd_device.name_ : resolved_name;
-
-  int fd = open(open_name.c_str(), O_RDONLY);
-  if (fd < 0) {
-    info.error_code_ = errno;
-    syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
-    return info;
-  }
-
-  const bool is_ata = boost::starts_with(open_name, "/dev/sd");
-  const bool is_nvme = boost::starts_with(open_name, "/dev/nvme");
-
-  if (is_ata) {
-    info = read_ata_hdd_info(fd, &info, hdd_device);
-  } else if (is_nvme) {
-    info = read_nvme_hdd_info(fd, &info);
-  }
-
-  info.error_code_ = close(fd);
-  if (info.error_code_ < 0) {
-    info.error_code_ = errno;
-    syslog(LOG_ERR, "Failed to close the file descriptor FD. %s\n", strerror(info.error_code_));
-  }
-
-  return info;
-}
-}  // namespace
-
-/**
- * @brief ATA PASS-THROUGH (12) command
- * @note For details please see the document below.
- * - ATA Command Pass-Through
- *   https://www.t10.org/ftp/t10/document.04/04-262r8.pdf
- */
-struct AtaPassThrough12
-{
-  uint8_t operation_code_;  //!< @brief OPERATION CODE (A1h)
-  // cppcheck-suppress unusedStructMember
-  uint8_t reserved0_ : 1;  //!< @brief Reserved
-  uint8_t protocol_ : 4;   //!< @brief PROTOCOL
-  // cppcheck-suppress unusedStructMember
-  uint8_t multiple_count_ : 3;  //!< @brief MULTIPLE_COUNT
-  uint8_t t_length_ : 2;        //!< @brief T_LENGTH
-  uint8_t byt_blok_ : 1;        //!< @brief BYT_BLOK
-  uint8_t t_dir_ : 1;           //!< @brief T_DIR
-  // cppcheck-suppress unusedStructMember
-  uint8_t reserved1_ : 1;  //!< @brief Reserved
-  // cppcheck-suppress unusedStructMember
-  uint8_t ck_cond_ : 1;  //!< @brief CK_COND
-  // cppcheck-suppress unusedStructMember
-  uint8_t off_line_ : 2;  //!< @brief OFF_LINE
-  uint8_t features_;      //!< @brief FEATURES (0:7)
-  uint8_t sector_count_;  //!< @brief SECTOR_COUNT (0:7)
-  // cppcheck-suppress unusedStructMember
-  uint8_t lba_low_;   //!< @brief LBA_LOW (0:7)
-  uint8_t lba_mid_;   //!< @brief LBA_MID (0:7)
-  uint8_t lbe_high_;  //!< @brief LBE_HIGH (0:7)
-  // cppcheck-suppress unusedStructMember
-  uint8_t device_;   //!< @brief DEVICE
-  uint8_t command_;  //!< @brief COMMAND
-  // cppcheck-suppress unusedStructMember
-  uint8_t reserved2_;  //!< @brief Reserved
-  // cppcheck-suppress unusedStructMember
-  uint8_t control_;  //!< @brief CONTROL
-};
-
-/**
- * @brief Attribute Table Format
- * @note For details please see the documents below.
- * - SMART Attribute Overview
- *   http://www.t13.org/Documents/UploadedDocuments/docs2005/e05171r0-ACS-SMARTAttributes_Overview.pdf
- */
-struct AttributeEntry
-{
-  uint8_t attribute_id_;  //!< @brief Attribute ID
-  //  Flags
-  uint16_t warranty_ : 1;           //!< @brief Bit 0 - Warranty
-  uint16_t offline_ : 1;            //!< @brief Bit 1 - Offline
-  uint16_t performance_ : 1;        //!< @brief Bit 2 - Performance
-  uint16_t error_rate_ : 1;         //!< @brief Bit 3 - Error rate
-  uint16_t event_count_ : 1;        //!< @brief Bit 4 - Event count
-  uint16_t self_preservation_ : 1;  //!< @brief Bit 5 - Self-preservation
-  uint16_t reserved_ : 10;          //!< @brief Bits 6-15 - Reserved
-
-  uint8_t current_value_;        //!< @brief Current value
-  uint8_t worst_value_;          //!< @brief Worst value
-  uint32_t data_;                //!< @brief Data
-  uint16_t attribute_specific_;  //!< @brief Attribute-specific
-  uint8_t threshold_;            //!< @brief Threshold
-} __attribute__((packed));       // Minimize total struct memory 16 to 12
-
-/**
- * @brief Device SMART data structure
- * @note For details please see the documents below.
- * - ATA/ATAPI Command Set - 3 (ACS-3)
- *   http://www.t13.org/Documents/UploadedDocuments/docs2013/d2161r5-ATAATAPI_Command_Set_-_3.pdf
- * - SMART Attribute Overview
- *   http://www.t13.org/Documents/UploadedDocuments/docs2005/e05171r0-ACS-SMARTAttributes_Overview.pdf
- */
-struct SmartData
-{
-  // Offset 0..361 X Vendor specific
-  uint16_t smart_structure_version_;    //!< @brief SMART structure version
-  AttributeEntry attribute_entry_[30];  //!< @brief Attribute entry 1 - 30
-  // Offset 362 to 511
-  uint8_t off_line_data_collection_status_;      //!< @brief Off-line data collection status
-  uint8_t self_test_execution_status_byte_;      //!< @brief Self-test execution status byte
-  uint16_t vendor_specific0_;                    //!< @brief Vendor specific
-  uint8_t vendor_specific1_;                     //!< @brief Vendor specific
-  uint8_t off_line_data_collection_capability_;  //!< @brief Off-line data collection capability
-  uint16_t smart_capability_;                    //!< @brief SMART capability
-  uint8_t error_logging_capability_;             //!< @brief Error logging capability
-  uint8_t vendor_specific2_;                     //!< @brief Vendor specific
-  uint8_t short_self_test_polling_time_;     //!< @brief Short self-test polling time (in minutes)
-  uint8_t extended_self_test_polling_time_;  //!< @brief Extended self-test polling time in minutes
-  uint8_t
-    conveyance_self_test_polling_time_;     //!< @brief Conveyance self-test polling time in minutes
-  uint16_t                                  //!< @brief Extended self-test polling time
-    extended_self_test_polling_time_word_;  //!<   in minutes (word)
-  uint8_t reserved_[9];                     //!< @brief Reserved
-  uint8_t vendor_specific3_[125];           //!< @brief Vendor specific
-  uint8_t data_structure_checksum_;         //!< @brief Data structure checksum
-} __attribute__((packed));                  // Minimize total struct memory 514 to 512
-
-/**
- * @brief print usage
- */
-void usage()
-{
-  printf("Usage: hdd_reader [options]\n");
-  printf("  -h --help        : Display help\n");
-  printf("  -s --socket PATH : Path of UNIX domain socket\n");
-  printf("\n");
-}
-
-/**
- * @brief exchanges the values of 2 bytes
- * @param [inout] str a string reference to ATA string
- * @param [in] size size of ATA string
- * @note Each pair of bytes in an ATA string is swapped.
- * FIRMWARE REVISION field example
- * Word Value
- * 23   6162h ("ba")
- * 24   6364h ("dc")
- * 25   6566h ("fe")
- * 26   6720h (" g")
- * -> "abcdefg "
- */
-void swap_char(std::string & str, size_t size)
-{
-  for (auto i = 0U; i < size; i += 2U) {
-    std::swap(str[i], str[i + 1]);
-  }
-}
-
 /**
  * @brief get IDENTIFY DEVICE for ATA drive
  * @param [in] fd file descriptor to device
@@ -518,6 +343,181 @@ int get_nvme_smart_data(int fd, HddInfo * info)
   info->is_valid_recovered_error_ = false;
 
   return EXIT_SUCCESS;
+}
+
+HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
+{
+  return read_hdd_info_in_sequence(
+    info, "Failed to get IDENTIFY DEVICE for ATA drive", "Failed to get SMART LOG for ATA drive",
+    [&]() { return get_ata_identify(fd, info); },
+    [&]() { return get_ata_smart_data(fd, info, hdd_device); });
+}
+
+HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
+{
+  return read_hdd_info_in_sequence(
+    info, "Failed to get Identify for NVMe drive",
+    "Failed to get SMART / Health Information for NVMe drive",
+    [&]() { return get_nvme_identify(fd, info); }, [&]() { return get_nvme_smart_data(fd, info); });
+}
+
+HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
+{
+  HddInfo info{};
+  const auto resolved_name = resolve_block_device_path(hdd_device.name_);
+  const auto open_name = resolved_name.empty() ? hdd_device.name_ : resolved_name;
+
+  int fd = open(open_name.c_str(), O_RDONLY);
+  if (fd < 0) {
+    info.error_code_ = errno;
+    syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
+    return info;
+  }
+
+  const bool is_ata = boost::starts_with(open_name, "/dev/sd");
+  const bool is_nvme = boost::starts_with(open_name, "/dev/nvme");
+
+  if (is_ata) {
+    info = read_ata_hdd_info(fd, &info, hdd_device);
+  } else if (is_nvme) {
+    info = read_nvme_hdd_info(fd, &info);
+  }
+
+  info.error_code_ = close(fd);
+  if (info.error_code_ < 0) {
+    info.error_code_ = errno;
+    syslog(LOG_ERR, "Failed to close the file descriptor FD. %s\n", strerror(info.error_code_));
+  }
+
+  return info;
+}
+}  // namespace
+
+/**
+ * @brief ATA PASS-THROUGH (12) command
+ * @note For details please see the document below.
+ * - ATA Command Pass-Through
+ *   https://www.t10.org/ftp/t10/document.04/04-262r8.pdf
+ */
+struct AtaPassThrough12
+{
+  uint8_t operation_code_;  //!< @brief OPERATION CODE (A1h)
+  // cppcheck-suppress unusedStructMember
+  uint8_t reserved0_ : 1;  //!< @brief Reserved
+  uint8_t protocol_ : 4;   //!< @brief PROTOCOL
+  // cppcheck-suppress unusedStructMember
+  uint8_t multiple_count_ : 3;  //!< @brief MULTIPLE_COUNT
+  uint8_t t_length_ : 2;        //!< @brief T_LENGTH
+  uint8_t byt_blok_ : 1;        //!< @brief BYT_BLOK
+  uint8_t t_dir_ : 1;           //!< @brief T_DIR
+  // cppcheck-suppress unusedStructMember
+  uint8_t reserved1_ : 1;  //!< @brief Reserved
+  // cppcheck-suppress unusedStructMember
+  uint8_t ck_cond_ : 1;  //!< @brief CK_COND
+  // cppcheck-suppress unusedStructMember
+  uint8_t off_line_ : 2;  //!< @brief OFF_LINE
+  uint8_t features_;      //!< @brief FEATURES (0:7)
+  uint8_t sector_count_;  //!< @brief SECTOR_COUNT (0:7)
+  // cppcheck-suppress unusedStructMember
+  uint8_t lba_low_;   //!< @brief LBA_LOW (0:7)
+  uint8_t lba_mid_;   //!< @brief LBA_MID (0:7)
+  uint8_t lbe_high_;  //!< @brief LBE_HIGH (0:7)
+  // cppcheck-suppress unusedStructMember
+  uint8_t device_;   //!< @brief DEVICE
+  uint8_t command_;  //!< @brief COMMAND
+  // cppcheck-suppress unusedStructMember
+  uint8_t reserved2_;  //!< @brief Reserved
+  // cppcheck-suppress unusedStructMember
+  uint8_t control_;  //!< @brief CONTROL
+};
+
+/**
+ * @brief Attribute Table Format
+ * @note For details please see the documents below.
+ * - SMART Attribute Overview
+ *   http://www.t13.org/Documents/UploadedDocuments/docs2005/e05171r0-ACS-SMARTAttributes_Overview.pdf
+ */
+struct AttributeEntry
+{
+  uint8_t attribute_id_;  //!< @brief Attribute ID
+  //  Flags
+  uint16_t warranty_ : 1;           //!< @brief Bit 0 - Warranty
+  uint16_t offline_ : 1;            //!< @brief Bit 1 - Offline
+  uint16_t performance_ : 1;        //!< @brief Bit 2 - Performance
+  uint16_t error_rate_ : 1;         //!< @brief Bit 3 - Error rate
+  uint16_t event_count_ : 1;        //!< @brief Bit 4 - Event count
+  uint16_t self_preservation_ : 1;  //!< @brief Bit 5 - Self-preservation
+  uint16_t reserved_ : 10;          //!< @brief Bits 6-15 - Reserved
+
+  uint8_t current_value_;        //!< @brief Current value
+  uint8_t worst_value_;          //!< @brief Worst value
+  uint32_t data_;                //!< @brief Data
+  uint16_t attribute_specific_;  //!< @brief Attribute-specific
+  uint8_t threshold_;            //!< @brief Threshold
+} __attribute__((packed));       // Minimize total struct memory 16 to 12
+
+/**
+ * @brief Device SMART data structure
+ * @note For details please see the documents below.
+ * - ATA/ATAPI Command Set - 3 (ACS-3)
+ *   http://www.t13.org/Documents/UploadedDocuments/docs2013/d2161r5-ATAATAPI_Command_Set_-_3.pdf
+ * - SMART Attribute Overview
+ *   http://www.t13.org/Documents/UploadedDocuments/docs2005/e05171r0-ACS-SMARTAttributes_Overview.pdf
+ */
+struct SmartData
+{
+  // Offset 0..361 X Vendor specific
+  uint16_t smart_structure_version_;    //!< @brief SMART structure version
+  AttributeEntry attribute_entry_[30];  //!< @brief Attribute entry 1 - 30
+  // Offset 362 to 511
+  uint8_t off_line_data_collection_status_;      //!< @brief Off-line data collection status
+  uint8_t self_test_execution_status_byte_;      //!< @brief Self-test execution status byte
+  uint16_t vendor_specific0_;                    //!< @brief Vendor specific
+  uint8_t vendor_specific1_;                     //!< @brief Vendor specific
+  uint8_t off_line_data_collection_capability_;  //!< @brief Off-line data collection capability
+  uint16_t smart_capability_;                    //!< @brief SMART capability
+  uint8_t error_logging_capability_;             //!< @brief Error logging capability
+  uint8_t vendor_specific2_;                     //!< @brief Vendor specific
+  uint8_t short_self_test_polling_time_;     //!< @brief Short self-test polling time (in minutes)
+  uint8_t extended_self_test_polling_time_;  //!< @brief Extended self-test polling time in minutes
+  uint8_t
+    conveyance_self_test_polling_time_;     //!< @brief Conveyance self-test polling time in minutes
+  uint16_t                                  //!< @brief Extended self-test polling time
+    extended_self_test_polling_time_word_;  //!<   in minutes (word)
+  uint8_t reserved_[9];                     //!< @brief Reserved
+  uint8_t vendor_specific3_[125];           //!< @brief Vendor specific
+  uint8_t data_structure_checksum_;         //!< @brief Data structure checksum
+} __attribute__((packed));                  // Minimize total struct memory 514 to 512
+
+/**
+ * @brief print usage
+ */
+void usage()
+{
+  printf("Usage: hdd_reader [options]\n");
+  printf("  -h --help        : Display help\n");
+  printf("  -s --socket PATH : Path of UNIX domain socket\n");
+  printf("\n");
+}
+
+/**
+ * @brief exchanges the values of 2 bytes
+ * @param [inout] str a string reference to ATA string
+ * @param [in] size size of ATA string
+ * @note Each pair of bytes in an ATA string is swapped.
+ * FIRMWARE REVISION field example
+ * Word Value
+ * 23   6162h ("ba")
+ * 24   6364h ("dc")
+ * 25   6566h ("fe")
+ * 26   6720h (" g")
+ * -> "abcdefg "
+ */
+void swap_char(std::string & str, size_t size)
+{
+  for (auto i = 0U; i < size; i += 2U) {
+    std::swap(str[i], str[i + 1]);
+  }
 }
 
 /**

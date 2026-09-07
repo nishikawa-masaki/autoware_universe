@@ -58,16 +58,28 @@ bool is_non_scsi_device(const std::string & device_name)
   // clang-format on
 }
 
+inline bool is_octal_digit(char c)
+{
+  return c >= '0' && c <= '7';
+}
+
+inline bool is_octal_coded(const std::string & s, size_t i)
+{
+  if (s[i] != '\\' || (i + 3) >= s.size()) {
+    return false;
+  }
+  return is_octal_digit(s[i + 1]) &&
+         is_octal_digit(s[i + 2]) &&
+         is_octal_digit(s[i + 3]);
+}
+
 std::string unescape_mount_field(const std::string & escaped)
 {
   std::string unescaped;
   unescaped.reserve(escaped.size());
 
   for (size_t i = 0; i < escaped.size(); ++i) {
-    if (
-      escaped[i] == '\\' && i + 3 < escaped.size() && escaped[i + 1] >= '0' &&
-      escaped[i + 1] <= '7' && escaped[i + 2] >= '0' && escaped[i + 2] <= '7' &&
-      escaped[i + 3] >= '0' && escaped[i + 3] <= '7') {
+    if (is_octal_coded(escaped, i)) {
       const char ch = static_cast<char>(
         (escaped[i + 1] - '0') * 64 + (escaped[i + 2] - '0') * 8 + (escaped[i + 3] - '0'));
       unescaped.push_back(ch);
@@ -76,7 +88,6 @@ std::string unescape_mount_field(const std::string & escaped)
     }
     unescaped.push_back(escaped[i]);
   }
-
   return unescaped;
 }
 
