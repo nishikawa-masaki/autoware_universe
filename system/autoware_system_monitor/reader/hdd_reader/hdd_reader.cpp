@@ -97,18 +97,17 @@ std::string resolve_block_device_path(const std::string & device)
 }
 
 HddInfo read_hdd_info_in_sequence(
-  HddInfo * info, const char * first_error_message, const char * second_error_message,
-  const std::function<int()> & first_step, const std::function<int()> & second_step)
+  HddInfo * info,
+  const std::function<int()> & first_step,
+  const std::function<int()> & second_step)
 {
   info->error_code_ = first_step();
   if (info->error_code_ != 0) {
-    syslog(LOG_ERR, "%s. %s\n", first_error_message, strerror(info->error_code_));
     return *info;
   }
 
   info->error_code_ = second_step();
   if (info->error_code_ != 0) {
-    syslog(LOG_ERR, "%s. %s\n", second_error_message, strerror(info->error_code_));
     return *info;
   }
 
@@ -126,7 +125,7 @@ HddInfo read_hdd_info_in_sequence(
  * - ATA Command Set - 4  (ACS-4)
  *   http://www.t13.org/Documents/UploadedDocuments/docs2016/di529r14-ATAATAPI_Command_Set_-_4.pdf
  */
-int get_ata_identify(int fd, HddInfo * info)
+int get_ata_identity(int fd, HddInfo * info, const std::string & error_message)
 {
   sg_io_hdr_t hdr{};
   AtaPassThrough12 ata{};
@@ -153,7 +152,9 @@ int get_ata_identify(int fd, HddInfo * info)
 
   // send SCSI command to device
   if (ioctl(fd, SG_IO, &hdr) < 0) {
-    return errno;
+    int err = errno;
+    syslog(LOG_ERR, "%s. %s\n", error_message, strerror(err));
+    return err;
   }
 
   // IDENTIFY DEVICE
@@ -186,7 +187,7 @@ int get_ata_identify(int fd, HddInfo * info)
  * - SMART Attribute Annex
  *   http://www.t13.org/documents/uploadeddocuments/docs2005/e05148r0-acs-smartattributesannex.pdf
  */
-int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device)
+int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device, const std::string & error_message)
 {
   sg_io_hdr_t hdr{};
   AtaPassThrough12 ata{};
@@ -216,6 +217,7 @@ int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device)
 
   // send SCSI command to device
   if (ioctl(fd, SG_IO, &hdr) < 0) {
+    syslog(LOG_ERR, "%s. %s\n", error_message, strerror(errno));
     return errno;
   }
 
@@ -261,7 +263,7 @@ int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device)
  * - NVM Express 1.2b
  *   https://www.nvmexpress.org/wp-content/uploads/NVM_Express_1_2b_Gold_20160603.pdf
  */
-int get_nvme_identify(int fd, HddInfo * info)
+int get_nvme_identity(int fd, HddInfo * info, const std::string & error_message)
 {
   nvme_admin_cmd cmd{};
   char data[4096]{};  // Fixed size for Identify command
@@ -275,7 +277,9 @@ int get_nvme_identify(int fd, HddInfo * info)
   // send Admin Command to device
   int ret = ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
   if (ret < 0) {
-    return errno;
+    int err = errno;
+    syslog(LOG_ERR, "%s. %s\n", error_message, strerror(err));
+    return err;
   }
 
   // Identify Controller Data Structure
@@ -299,7 +303,7 @@ int get_nvme_identify(int fd, HddInfo * info)
  * - NVM Express 1.2b
  *   https://www.nvmexpress.org/wp-content/uploads/NVM_Express_1_2b_Gold_20160603.pdf
  */
-int get_nvme_smart_data(int fd, HddInfo * info)
+int get_nvme_smart_data(int fd, HddInfo * info, const std::string & error_message)
 {
   nvme_admin_cmd cmd{};
   unsigned char data[144]{};  // 36 Dword (get byte 0 to 143)
@@ -316,6 +320,7 @@ int get_nvme_smart_data(int fd, HddInfo * info)
   // send Admin Command to device
   int ret = ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
   if (ret < 0) {
+    syslog(LOG_ERR, "%s. %s\n", error_message, strerror(errno));
     return errno;
   }
 
@@ -348,17 +353,25 @@ int get_nvme_smart_data(int fd, HddInfo * info)
 HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
 {
   return read_hdd_info_in_sequence(
-    info, "Failed to get IDENTIFY DEVICE for ATA drive", "Failed to get SMART LOG for ATA drive",
-    [&]() { return get_ata_identify(fd, info); },
-    [&]() { return get_ata_smart_data(fd, info, hdd_device); });
+    info,
+    [&]() {
+      return get_ata_identity(fd, info, "Failed to get IDENTIFY DEVICE for ATA drive");
+    },
+    [&]() {
+      return get_ata_smart_data(fd, info, hdd_device, "Failed to get SMART LOG for ATA drive");
+    });
 }
 
 HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
 {
   return read_hdd_info_in_sequence(
-    info, "Failed to get Identify for NVMe drive",
-    "Failed to get SMART / Health Information for NVMe drive",
-    [&]() { return get_nvme_identify(fd, info); }, [&]() { return get_nvme_smart_data(fd, info); });
+    info,
+    [&]() {
+      return get_nvme_identity(fd, info, "Failed to get Identify for NVMe drive");
+    },
+    [&]() {
+      return get_nvme_smart_data(fd, info, "Failed to get SMART / Health Information for NVMe drive");
+    });
 }
 
 HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)

@@ -91,6 +91,57 @@ std::string unescape_mount_field(const std::string & escaped)
   return unescaped;
 }
 
+std::string extract_device_from_mount_entry(
+  const std::string & line, const std::string & mount_point)
+{
+  std::istringstream iss(line);
+  std::string source;
+  std::string mounted_on;
+  if (!(iss >> source >> mounted_on)) {
+    return {};
+  }
+
+  source = unescape_mount_field(source);
+  mounted_on = unescape_mount_field(mounted_on);
+  if (mounted_on != mount_point) {
+    return {};
+  }
+
+  return source;
+}
+
+std::string find_device_from_mounts_file(const std::string & mounts_file_path, const std::string & mount_point)
+{
+  std::ifstream mounts_file(mounts_file_path);
+  if (!mounts_file.is_open()) {
+    return {};
+  }
+
+  std::string line;
+  while (std::getline(mounts_file, line)) {
+    const auto device = extract_device_from_mount_entry(line, mount_point);
+    if (!device.empty()) {
+      return device;
+    }
+  }
+
+  return {};
+}
+
+std::string find_device_from_mount_points(const std::string & mount_point)
+{
+  const std::array<std::string, 2> mounts_files = {"/proc/self/mounts", "/proc/mounts"};
+
+  for (const auto & mounts_file : mounts_files) {
+    const auto device = find_device_from_mounts_file(mounts_file, mount_point);
+    if (!device.empty()) {
+      return device;
+    }
+  }
+
+  return {};
+}
+
 }  // namespace
 
 namespace bp = boost::process;
@@ -636,45 +687,13 @@ void HddMonitor::getHddParams()
 
 std::string HddMonitor::getDeviceFromMountPoint(const std::string & mount_point)
 {
-  const auto find_device_from_mounts = [&](const char * mounts_file_path) {
-    std::ifstream mounts_file(mounts_file_path);
-    if (!mounts_file.is_open()) {
-      return std::string{};
-    }
-
-    std::string line;
-    while (std::getline(mounts_file, line)) {
-      std::istringstream iss(line);
-      std::string source;
-      std::string mounted_on;
-      if (!(iss >> source >> mounted_on)) {
-        continue;
-      }
-
-      source = unescape_mount_field(source);
-      mounted_on = unescape_mount_field(mounted_on);
-      if (mounted_on != mount_point) {
-        continue;
-      }
-
-      return source;
-    }
-
-    return std::string{};
-  };
-
-  auto device = find_device_from_mounts("/proc/self/mounts");
-  if (!device.empty()) {
-    return device;
-  }
-
-  device = find_device_from_mounts("/proc/mounts");
+  const auto device = find_device_from_mount_points(mount_point);
   if (!device.empty()) {
     return device;
   }
 
   RCLCPP_ERROR(get_logger(), "Failed to find device name. %s", mount_point.c_str());
-  return "";
+  return {};
 }
 
 void HddMonitor::onTimer()
