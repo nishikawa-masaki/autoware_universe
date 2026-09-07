@@ -97,9 +97,7 @@ std::string resolve_block_device_path(const std::string & device)
 }
 
 HddInfo read_hdd_info_in_sequence(
-  HddInfo * info,
-  const std::function<int()> & first_step,
-  const std::function<int()> & second_step)
+  HddInfo * info, const std::function<int()> & first_step, const std::function<int()> & second_step)
 {
   info->error_code_ = first_step();
   if (info->error_code_ != 0) {
@@ -187,7 +185,8 @@ int get_ata_identity(int fd, HddInfo * info, const std::string & error_message)
  * - SMART Attribute Annex
  *   http://www.t13.org/documents/uploadeddocuments/docs2005/e05148r0-acs-smartattributesannex.pdf
  */
-int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device, const std::string & error_message)
+int get_ata_smart_data(
+  int fd, HddInfo * info, const HddDevice & device, const std::string & error_message)
 {
   sg_io_hdr_t hdr{};
   AtaPassThrough12 ata{};
@@ -354,9 +353,7 @@ HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
 {
   return read_hdd_info_in_sequence(
     info,
-    [&]() {
-      return get_ata_identity(fd, info, "Failed to get IDENTIFY DEVICE for ATA drive");
-    },
+    [&]() { return get_ata_identity(fd, info, "Failed to get IDENTIFY DEVICE for ATA drive"); },
     [&]() {
       return get_ata_smart_data(fd, info, hdd_device, "Failed to get SMART LOG for ATA drive");
     });
@@ -365,12 +362,10 @@ HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
 HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
 {
   return read_hdd_info_in_sequence(
-    info,
+    info, [&]() { return get_nvme_identity(fd, info, "Failed to get Identify for NVMe drive"); },
     [&]() {
-      return get_nvme_identity(fd, info, "Failed to get Identify for NVMe drive");
-    },
-    [&]() {
-      return get_nvme_smart_data(fd, info, "Failed to get SMART / Health Information for NVMe drive");
+      return get_nvme_smart_data(
+        fd, info, "Failed to get SMART / Health Information for NVMe drive");
     });
 }
 
