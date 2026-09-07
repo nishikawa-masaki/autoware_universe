@@ -68,9 +68,7 @@ inline bool is_octal_coded(const std::string & s, size_t i)
   if (s[i] != '\\' || (i + 3) >= s.size()) {
     return false;
   }
-  return is_octal_digit(s[i + 1]) &&
-         is_octal_digit(s[i + 2]) &&
-         is_octal_digit(s[i + 3]);
+  return is_octal_digit(s[i + 1]) && is_octal_digit(s[i + 2]) && is_octal_digit(s[i + 3]);
 }
 
 std::string unescape_mount_field(const std::string & escaped)
@@ -110,7 +108,8 @@ std::string extract_device_from_mount_entry(
   return source;
 }
 
-std::string find_device_from_mounts_file(const std::string & mounts_file_path, const std::string & mount_point)
+std::string find_device_from_mounts_file(
+  const std::string & mounts_file_path, const std::string & mount_point)
 {
   std::ifstream mounts_file(mounts_file_path);
   if (!mounts_file.is_open()) {
