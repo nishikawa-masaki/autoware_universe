@@ -54,6 +54,12 @@
 
 namespace
 {
+struct ReadContext
+{
+  int fd;
+  std::string error_message;
+};
+
 constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
 
 std::string resolve_block_device_path(const std::string & device)
@@ -224,7 +230,7 @@ struct SmartData
  * - ATA Command Set - 4  (ACS-4)
  *   http://www.t13.org/Documents/UploadedDocuments/docs2016/di529r14-ATAATAPI_Command_Set_-_4.pdf
  */
-int get_ata_identity(int fd, HddInfo * info, const std::string & error_message)
+int get_ata_identity(const ReadContext & ctx, HddInfo * info)
 {
   sg_io_hdr_t hdr{};
   AtaPassThrough12 ata{};
@@ -250,9 +256,9 @@ int get_ata_identity(int fd, HddInfo * info, const std::string & error_message)
   hdr.timeout = 1000;                // 1 second
 
   // send SCSI command to device
-  if (ioctl(fd, SG_IO, &hdr) < 0) {
+  if (ioctl(ctx.fd, SG_IO, &hdr) < 0) {
     int err = errno;
-    syslog(LOG_ERR, "%s. %s\n", error_message.c_str(), strerror(err));
+    syslog(LOG_ERR, "%s. %s\n", ctx.error_message.c_str(), strerror(err));
     return err;
   }
 
@@ -286,8 +292,7 @@ int get_ata_identity(int fd, HddInfo * info, const std::string & error_message)
  * - SMART Attribute Annex
  *   http://www.t13.org/documents/uploadeddocuments/docs2005/e05148r0-acs-smartattributesannex.pdf
  */
-int get_ata_smart_data(
-  int fd, HddInfo * info, const HddDevice & device, const std::string & error_message)
+int get_ata_smart_data(const ReadContext & ctx, HddInfo * info, const HddDevice & device)
 {
   sg_io_hdr_t hdr{};
   AtaPassThrough12 ata{};
@@ -316,8 +321,8 @@ int get_ata_smart_data(
   hdr.timeout = 1000;                // 1 second
 
   // send SCSI command to device
-  if (ioctl(fd, SG_IO, &hdr) < 0) {
-    syslog(LOG_ERR, "%s. %s\n", error_message.c_str(), strerror(errno));
+  if (ioctl(ctx.fd, SG_IO, &hdr) < 0) {
+    syslog(LOG_ERR, "%s. %s\n", ctx.error_message.c_str(), strerror(errno));
     return errno;
   }
 
@@ -363,7 +368,7 @@ int get_ata_smart_data(
  * - NVM Express 1.2b
  *   https://www.nvmexpress.org/wp-content/uploads/NVM_Express_1_2b_Gold_20160603.pdf
  */
-int get_nvme_identity(int fd, HddInfo * info, const std::string & error_message)
+int get_nvme_identity(const ReadContext & ctx, HddInfo * info)
 {
   nvme_admin_cmd cmd{};
   char data[4096]{};  // Fixed size for Identify command
@@ -375,10 +380,10 @@ int get_nvme_identity(int fd, HddInfo * info, const std::string & error_message)
   cmd.cdw10 = 0x01;                             // Identify Controller data structure
 
   // send Admin Command to device
-  int ret = ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
+  int ret = ioctl(ctx.fd, NVME_IOCTL_ADMIN_CMD, &cmd);
   if (ret < 0) {
     int err = errno;
-    syslog(LOG_ERR, "%s. %s\n", error_message, strerror(err));
+    syslog(LOG_ERR, "%s. %s\n", ctx.error_message.c_str(), strerror(err));
     return err;
   }
 
@@ -403,7 +408,7 @@ int get_nvme_identity(int fd, HddInfo * info, const std::string & error_message)
  * - NVM Express 1.2b
  *   https://www.nvmexpress.org/wp-content/uploads/NVM_Express_1_2b_Gold_20160603.pdf
  */
-int get_nvme_smart_data(int fd, HddInfo * info, const std::string & error_message)
+int get_nvme_smart_data(const ReadContext & ctx, HddInfo * info)
 {
   nvme_admin_cmd cmd{};
   unsigned char data[144]{};  // 36 Dword (get byte 0 to 143)
@@ -418,9 +423,9 @@ int get_nvme_smart_data(int fd, HddInfo * info, const std::string & error_messag
                            // Bit 07:00 = 02h (SMART / Health Information)
 
   // send Admin Command to device
-  int ret = ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
+  int ret = ioctl(ctx.fd, NVME_IOCTL_ADMIN_CMD, &cmd);
   if (ret < 0) {
-    syslog(LOG_ERR, "%s. %s\n", error_message.c_str(), strerror(errno));
+    syslog(LOG_ERR, "%s. %s\n", ctx.error_message.c_str(), strerror(errno));
     return errno;
   }
 
@@ -451,7 +456,8 @@ int get_nvme_smart_data(int fd, HddInfo * info, const std::string & error_messag
 }
 
 HddInfo read_hdd_info_in_sequence(
-  HddInfo * info, const std::function<int()> & first_step, const std::function<int()> & second_step)
+  HddInfo * info, const std::function<int()> & first_step,
+  const std::function<int()> & second_step)
 {
   info->error_code_ = first_step();
   if (info->error_code_ != 0) {
@@ -468,21 +474,31 @@ HddInfo read_hdd_info_in_sequence(
 
 HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
 {
+  const ReadContext identify_context{fd, "Failed to get IDENTIFY DEVICE for ATA drive"};
+  const ReadContext get_data_context{fd, "Failed to get SMART LOG for ATA drive"};
+
   return read_hdd_info_in_sequence(
     info,
-    [&]() { return get_ata_identity(fd, info, "Failed to get IDENTIFY DEVICE for ATA drive"); },
     [&]() {
-      return get_ata_smart_data(fd, info, hdd_device, "Failed to get SMART LOG for ATA drive");
+      return get_ata_identity(identify_context, info);
+    },
+    [&]() {
+      return get_ata_smart_data(get_data_context, info, hdd_device);
     });
 }
 
 HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
 {
+  const ReadContext identify_context{fd, "Failed to get Identify for NVMe drive"};
+  const ReadContext get_data_context{fd, "Failed to get SMART / Health Information for NVMe drive"};
+
   return read_hdd_info_in_sequence(
-    info, [&]() { return get_nvme_identity(fd, info, "Failed to get Identify for NVMe drive"); },
+    info,
     [&]() {
-      return get_nvme_smart_data(
-        fd, info, "Failed to get SMART / Health Information for NVMe drive");
+      return get_nvme_identity(identify_context, info);
+    },
+    [&]() {
+      return get_nvme_smart_data(get_data_context, info);
     });
 }
 
