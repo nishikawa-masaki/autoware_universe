@@ -218,7 +218,6 @@ struct SmartData
   uint8_t data_structure_checksum_;         //!< @brief Data structure checksum
 } __attribute__((packed));                  // Minimize total struct memory 514 to 512
 
-
 /**
  * @brief get IDENTIFY DEVICE for ATA drive
  * @param [in] fd file descriptor to device
