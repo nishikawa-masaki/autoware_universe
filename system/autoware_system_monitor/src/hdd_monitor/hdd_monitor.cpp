@@ -228,12 +228,9 @@ void HddMonitor::checkSmart(
     return;
   }
 
-  int level = DiagStatus::OK;
   int whole_level = DiagStatus::OK;
-  int index = 0;
   std::string error_str = "";
-  std::string key_str = "";
-  std::string val_str = "";
+  int index = 0;
 
   for (auto itr = hdd_params_.begin(); itr != hdd_params_.end(); ++itr, ++index) {
     if (!hdd_connected_flags_[itr->first]) {
@@ -258,49 +255,52 @@ void HddMonitor::checkSmart(
       continue;
     }
 
+    struct {
+      int level = DiagStatus::OK;
+      std::string key_str = "";
+      std::string val_str = "";
+    } smart_info;
+
     switch (item) {
       case HddSmartInfoItem::TEMPERATURE: {
         float temp = static_cast<float>(hdd_itr->second.temp_);
 
-        level = DiagStatus::OK;
         if (temp >= itr->second.temp_error_) {
-          level = DiagStatus::ERROR;
+          smart_info.level = DiagStatus::ERROR;
         } else if (temp >= itr->second.temp_warn_) {
-          level = DiagStatus::WARN;
+          smart_info.level = DiagStatus::WARN;
         }
-        key_str = fmt::format("HDD {}: temperature", index);
+        smart_info.key_str = fmt::format("HDD {}: temperature", index);
         if (hdd_itr->second.is_valid_temp_) {
-          val_str = fmt::format("{:.1f} DegC", temp);
+          smart_info.val_str = fmt::format("{:.1f} DegC", temp);
         } else {
-          val_str = "not available";
+          smart_info.val_str = "not available";
         }
       } break;
       case HddSmartInfoItem::POWER_ON_HOURS: {
         int64_t power_on_hours = static_cast<int64_t>(hdd_itr->second.power_on_hours_);
 
-        level = DiagStatus::OK;
         if (power_on_hours >= itr->second.power_on_hours_warn_) {
-          level = DiagStatus::WARN;
+          smart_info.level = DiagStatus::WARN;
         }
-        key_str = fmt::format("HDD {}: power on hours", index);
+        smart_info.key_str = fmt::format("HDD {}: power on hours", index);
         if (hdd_itr->second.is_valid_power_on_hours_) {
-          val_str = fmt::format("{} Hours", hdd_itr->second.power_on_hours_);
+          smart_info.val_str = fmt::format("{} Hours", hdd_itr->second.power_on_hours_);
         } else {
-          val_str = "not available";
+          smart_info.val_str = "not available";
         }
       } break;
       case HddSmartInfoItem::TOTAL_DATA_WRITTEN: {
         uint64_t total_data_written = static_cast<uint64_t>(hdd_itr->second.total_data_written_);
 
-        level = DiagStatus::OK;
         if (total_data_written >= itr->second.total_data_written_warn_) {
-          level = DiagStatus::WARN;
+          smart_info.level = DiagStatus::WARN;
         }
-        key_str = fmt::format("HDD {}: total data written", index);
+        smart_info.key_str = fmt::format("HDD {}: total data written", index);
         if (hdd_itr->second.is_valid_total_data_written_) {
-          val_str = fmt::format("{}", hdd_itr->second.total_data_written_);
+          smart_info.val_str = fmt::format("{}", hdd_itr->second.total_data_written_);
         } else {
-          val_str = "not available";
+          smart_info.val_str = "not available";
         }
       } break;
       case HddSmartInfoItem::RECOVERED_ERROR: {
@@ -310,29 +310,31 @@ void HddMonitor::checkSmart(
         }
         recovered_error -= initial_recovered_errors_[itr->first];
 
-        level = DiagStatus::OK;
         if (recovered_error >= itr->second.recovered_error_warn_) {
-          level = DiagStatus::WARN;
+          smart_info.level = DiagStatus::WARN;
         }
-        key_str = fmt::format("HDD {}: recovered error", index);
+        smart_info.key_str = fmt::format("HDD {}: recovered error", index);
         if (hdd_itr->second.is_valid_recovered_error_) {
-          val_str = fmt::format("{}", hdd_itr->second.recovered_error_);
+          smart_info.val_str = fmt::format("{}", hdd_itr->second.recovered_error_);
         } else {
-          val_str = "not available";
+          smart_info.val_str = "not available";
         }
       } break;
       default:
+        whole_level = DiagStatus::ERROR;
+        error_str = "Unsupported SMART information item";
+        continue;  // Unexpected item, skip to the next HDD
         break;
     }
 
     stat.add(
-      fmt::format("HDD {}: status", index), smart_dicts_[static_cast<uint32_t>(item)].at(level));
+      fmt::format("HDD {}: status", index), smart_dicts_[static_cast<uint32_t>(item)].at(smart_info.level));
     stat.add(fmt::format("HDD {}: name", index), itr->second.disk_device_.c_str());
     stat.add(fmt::format("HDD {}: model", index), hdd_itr->second.model_.c_str());
     stat.add(fmt::format("HDD {}: serial", index), hdd_itr->second.serial_.c_str());
-    stat.addf(key_str, val_str.c_str());
+    stat.addf(smart_info.key_str, smart_info.val_str.c_str());
 
-    whole_level = std::max(whole_level, level);
+    whole_level = std::max(whole_level, smart_info.level);
   }
 
   if (!error_str.empty()) {
