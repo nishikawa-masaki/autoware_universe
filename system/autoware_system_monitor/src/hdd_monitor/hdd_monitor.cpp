@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <regex>
 #include <sstream>
 #include <string>
