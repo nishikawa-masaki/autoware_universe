@@ -478,12 +478,8 @@ HddInfo read_ata_hdd_info(int fd, HddInfo * info, const HddDevice & hdd_device)
 
   return read_hdd_info_in_sequence(
     info,
-    [&]() {
-      return get_ata_identity(identify_context, info);
-    },
-    [&]() {
-      return get_ata_smart_data(get_data_context, info, hdd_device);
-    });
+    [&]() { return get_ata_identity(identify_context, info); },
+    [&]() { return get_ata_smart_data(get_data_context, info, hdd_device); });
 }
 
 HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
@@ -493,12 +489,8 @@ HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
 
   return read_hdd_info_in_sequence(
     info,
-    [&]() {
-      return get_nvme_identity(identify_context, info);
-    },
-    [&]() {
-      return get_nvme_smart_data(get_data_context, info);
-    });
+    [&]() { return get_nvme_identity(identify_context, info); },
+    [&]() { return get_nvme_smart_data(get_data_context, info); });
 }
 
 HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
