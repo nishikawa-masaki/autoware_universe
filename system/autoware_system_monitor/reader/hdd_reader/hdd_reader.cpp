@@ -551,7 +551,7 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
     return -1;
   }
 
-  for (auto & hdd_device : hdd_devices) {
+  for (const auto & hdd_device : hdd_devices) {
     const auto resolved_name = resolve_block_device_path(hdd_device.name_);
     HddInfo info = read_hdd_info_for_device(hdd_device);
 
