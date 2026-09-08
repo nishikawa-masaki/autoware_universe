@@ -145,11 +145,8 @@ void update_recovered_error_smart_info(
   const RecoveredErrorCheckContext & context, SmartInfoResult & smart_info)
 {
   int32_t recovered_error = static_cast<int32_t>(context.hdd_info.recovered_error_);
-  if (
-    context.initial_recovered_errors.find(context.disk_name) ==
-    context.initial_recovered_errors.end()) {
-    context.initial_recovered_errors[context.disk_name] = recovered_error;
-  }
+  context.initial_recovered_errors.try_emplace(context.disk_name, recovered_error);
+
   recovered_error -= static_cast<int32_t>(context.initial_recovered_errors[context.disk_name]);
 
   if (recovered_error >= context.hdd_param.recovered_error_warn_) {
