@@ -162,6 +162,68 @@ void update_recovered_error_smart_info(
   }
 }
 
+struct StatItemResult
+{
+  int level{DiagStatus::OK};
+  std::string key_str;
+  std::string val_str;
+};
+
+struct StatItemCheckContext
+{
+  const HddStat & hdd_stat;
+  const HddParam & hdd_param;
+  int index;
+};
+
+void update_read_data_rate_stat(const StatItemCheckContext & context, StatItemResult & stat_info)
+{
+  const float read_data_rate = context.hdd_stat.read_data_rate_MBs_;
+
+  if (read_data_rate >= context.hdd_param.read_data_rate_warn_) {
+    stat_info.level = DiagStatus::WARN;
+  }
+
+  stat_info.key_str = fmt::format("HDD {}: data rate of read", context.index);
+  stat_info.val_str = fmt::format("{:.2f} MB/s", read_data_rate);
+}
+
+void update_write_data_rate_stat(const StatItemCheckContext & context, StatItemResult & stat_info)
+{
+  const float write_data_rate = context.hdd_stat.write_data_rate_MBs_;
+
+  if (write_data_rate >= context.hdd_param.write_data_rate_warn_) {
+    stat_info.level = DiagStatus::WARN;
+  }
+
+  stat_info.key_str = fmt::format("HDD {}: data rate of write", context.index);
+  stat_info.val_str = fmt::format("{:.2f} MB/s", write_data_rate);
+}
+
+void update_read_iops_stat(const StatItemCheckContext & context, StatItemResult & stat_info)
+{
+  const float read_iops = context.hdd_stat.read_iops_;
+
+  if (read_iops >= context.hdd_param.read_iops_warn_) {
+    stat_info.level = DiagStatus::WARN;
+  }
+
+  stat_info.key_str = fmt::format("HDD {}: IOPS of read", context.index);
+  stat_info.val_str = fmt::format("{:.2f} IOPS", read_iops);
+}
+
+void update_write_iops_stat(const StatItemCheckContext & context, StatItemResult & stat_info)
+{
+  const float write_iops = context.hdd_stat.write_iops_;
+
+  if (write_iops >= context.hdd_param.write_iops_warn_) {
+    stat_info.level = DiagStatus::WARN;
+  }
+
+  stat_info.key_str = fmt::format("HDD {}: IOPS of write", context.index);
+  stat_info.val_str = fmt::format("{:.2f} IOPS", write_iops);
+}
+
 bool is_non_scsi_device(const std::string & device_name)
 {
   // cspell:disable
@@ -603,55 +665,32 @@ void HddMonitor::checkStatistics(
   int hdd_index = 0;
   int whole_level = DiagStatus::OK;
   std::string error_str = "";
-  std::string key_str = "";
-  std::string val_str = "";
 
   for (auto itr = hdd_params_.begin(); itr != hdd_params_.end(); ++itr, ++hdd_index) {
     if (!hdd_connected_flags_[itr->first]) {
       continue;
     }
 
-    int level = DiagStatus::OK;
+    StatItemResult stat_info;
+    const StatItemCheckContext context{hdd_stats_[itr->first], itr->second, hdd_index};
 
     switch (item) {
-      case HddStatItem::READ_DATA_RATE: {
-        float read_data_rate = hdd_stats_[itr->first].read_data_rate_MBs_;
-
-        if (read_data_rate >= itr->second.read_data_rate_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: data rate of read", hdd_index);
-        val_str = fmt::format("{:.2f} MB/s", read_data_rate);
-      } break;
-      case HddStatItem::WRITE_DATA_RATE: {
-        float write_data_rate = hdd_stats_[itr->first].write_data_rate_MBs_;
-
-        if (write_data_rate >= itr->second.write_data_rate_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: data rate of write", hdd_index);
-        val_str = fmt::format("{:.2f} MB/s", write_data_rate);
-      } break;
-      case HddStatItem::READ_IOPS: {
-        float read_iops = hdd_stats_[itr->first].read_iops_;
-
-        if (read_iops >= itr->second.read_iops_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: IOPS of read", hdd_index);
-        val_str = fmt::format("{:.2f} IOPS", read_iops);
-      } break;
-      case HddStatItem::WRITE_IOPS: {
-        float write_iops = hdd_stats_[itr->first].write_iops_;
-
-        if (write_iops >= itr->second.write_iops_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: IOPS of write", hdd_index);
-        val_str = fmt::format("{:.2f} IOPS", write_iops);
-      } break;
-      default:
+      case HddStatItem::READ_DATA_RATE:
+        update_read_data_rate_stat(context, stat_info);
         break;
+      case HddStatItem::WRITE_DATA_RATE:
+        update_write_data_rate_stat(context, stat_info);
+        break;
+      case HddStatItem::READ_IOPS:
+        update_read_iops_stat(context, stat_info);
+        break;
+      case HddStatItem::WRITE_IOPS:
+        update_write_iops_stat(context, stat_info);
+        break;
+      default:
+        whole_level = DiagStatus::ERROR;
+        error_str = "Unsupported HDD statistics item";
+        continue;  // Unexpected item, skip to the next HDD
     }
 
     if (!hdd_stats_[itr->first].error_str_.empty()) {
@@ -661,12 +700,12 @@ void HddMonitor::checkStatistics(
     } else {
       stat.add(
         fmt::format("HDD {}: status", hdd_index),
-        stat_dicts_[static_cast<uint32_t>(item)].at(level));
+        stat_dicts_[static_cast<uint32_t>(item)].at(stat_info.level));
       stat.add(fmt::format("HDD {}: name", hdd_index), itr->second.disk_device_.c_str());
-      stat.add(key_str, val_str.c_str());
+      stat.add(stat_info.key_str, stat_info.val_str.c_str());
     }
 
-    whole_level = std::max(whole_level, level);
+    whole_level = std::max(whole_level, stat_info.level);
   }
 
   if (!error_str.empty()) {
