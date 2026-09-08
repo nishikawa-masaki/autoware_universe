@@ -111,12 +111,8 @@ void update_total_data_written_smart_info(
 }
 
 void update_recovered_error_smart_info(
-  const HddParam & hdd_param,
-  const HddInfo & hdd_info,
-  int index,
-  SmartInfoResult & smart_info,
-  std::map<std::string, uint32_t> & initial_recovered_errors,
-  const std::string & disk_name)
+  const HddParam & hdd_param, const HddInfo & hdd_info, int index, SmartInfoResult & smart_info,
+  std::map<std::string, uint32_t> & initial_recovered_errors, const std::string & disk_name)
 {
   int32_t recovered_error = static_cast<int32_t>(hdd_info.recovered_error_);
   if (initial_recovered_errors.find(disk_name) == initial_recovered_errors.end()) {
