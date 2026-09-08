@@ -366,7 +366,8 @@ void HddMonitor::checkSmart(
     }
 
     stat.add(
-      fmt::format("HDD {}: status", index), smart_dicts_[static_cast<uint32_t>(item)].at(smart_info.level));
+      fmt::format("HDD {}: status", index),
+      smart_dicts_[static_cast<uint32_t>(item)].at(smart_info.level));
     stat.add(fmt::format("HDD {}: name", index), itr->second.disk_device_.c_str());
     stat.add(fmt::format("HDD {}: model", index), hdd_itr->second.model_.c_str());
     stat.add(fmt::format("HDD {}: serial", index), hdd_itr->second.serial_.c_str());
