@@ -144,8 +144,9 @@ void update_recovered_error_smart_info(
   const RecoveredErrorCheckContext & context, SmartInfoResult & smart_info)
 {
   int32_t recovered_error = static_cast<int32_t>(context.hdd_info.recovered_error_);
-  if (context.initial_recovered_errors.find(context.disk_name) ==
-      context.initial_recovered_errors.end()) {
+  if (
+    context.initial_recovered_errors.find(context.disk_name) ==
+    context.initial_recovered_errors.end()) {
     context.initial_recovered_errors[context.disk_name] = recovered_error;
   }
   recovered_error -= static_cast<int32_t>(context.initial_recovered_errors[context.disk_name]);
@@ -383,8 +384,7 @@ void HddMonitor::checkSmart(
         break;
       case HddSmartInfoItem::RECOVERED_ERROR:
         update_recovered_error_smart_info(
-          {itr->second, hdd_itr->second, index, itr->first, initial_recovered_errors_},
-          smart_info);
+          {itr->second, hdd_itr->second, index, itr->first, initial_recovered_errors_}, smart_info);
         break;
       default:
         whole_level = DiagStatus::ERROR;
