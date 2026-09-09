@@ -154,8 +154,8 @@ inline bool validate_unmount_device_name(const std::string & part_device)
 
   return part_device.find("/dev/") == 0 &&
          (part_device.find("/dev/sd") == 0 || part_device.find("/dev/nvme") == 0 ||
-          part_device.find("/dev/mmcblk") == 0 ||
-          part_device.find("/dev/mapper/") == 0 || part_device.find("/dev/dm-") == 0);
+          part_device.find("/dev/mmcblk") == 0 || part_device.find("/dev/mapper/") == 0 ||
+          part_device.find("/dev/dm-") == 0);
 }
 
 #endif  // SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_
