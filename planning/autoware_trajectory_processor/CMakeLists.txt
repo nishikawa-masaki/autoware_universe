@@ -8,10 +8,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 autoware_package()
 
 find_package(ament_cmake_export_dependencies REQUIRED)
-ament_export_dependencies(
-  acados
-  autoware_point_types
-)
+ament_export_dependencies(acados)
 
 # Temporal kinematic-bicycle acados solver: Python codegen at build time (add_custom_command).
 # See src/acados_mpt/CMakeLists.txt — target acados_interface_temporal.

@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -31,7 +30,6 @@ using autoware_trajectory_validator::msg::ValidationReport;
 
 TrajectoryValidatorReport TrajectoryValidator::process(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
-  const std::unordered_set<std::string> & active_filter_names,
   const ValidatorContext & context) const
 {
   TrajectoryValidatorReport report;
@@ -71,9 +69,6 @@ TrajectoryValidatorReport TrajectoryValidator::process(
           evaluation.reason = "Found failed metrics";
         }
         combined_metrics.insert(combined_metrics.end(), val.metrics.begin(), val.metrics.end());
-        report.planning_factors.factors.insert(
-          report.planning_factors.factors.end(), val.planning_factors.factors.begin(),
-          val.planning_factors.factors.end());
       }
 
       report.processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);
@@ -91,13 +86,6 @@ TrajectoryValidatorReport TrajectoryValidator::process(
     if (all_feasible) {
       report.num_feasible_trajectories++;
     }
-
-    // remove metrics from inactive plugins so that they dont affect final trajectory risk level
-    combined_metrics.erase(
-      std::remove_if(
-        combined_metrics.begin(), combined_metrics.end(),
-        [&](const auto & metric) { return active_filter_names.count(metric.validator_name) == 0; }),
-      combined_metrics.end());
 
     RiskLevel risk_level;
     risk_level.level = all_feasible ? RiskLevel::SAFE : RiskLevel::DANGER;

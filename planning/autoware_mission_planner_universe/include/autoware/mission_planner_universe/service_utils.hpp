@@ -22,7 +22,6 @@
 #include <functional>
 #include <stdexcept>
 #include <string>
-#include <utility>
 
 namespace service_utils
 {
@@ -77,9 +76,7 @@ ResponseStatus sync_call(T & client, Req req)
   if (!client->service_is_ready()) {
     throw ServiceUnready(client->get_service_name());
   }
-  auto request = client->allocate_output_service_request();
-  *request = *req;
-  auto future = client->async_send_request(std::move(request));
+  auto future = client->async_send_request(req);
   return future.get()->status;
 }
 

@@ -27,14 +27,15 @@ namespace autoware::trajectory_ranker::metrics
 {
 
 void SteeringConsistency::evaluate(
-  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result) const
+  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
+  const float max_value) const
 {
   if (result->previous() == nullptr) return;
   if (!result->points() || result->points()->size() < 2) return;
 
   constexpr float epsilon = 1.0e-3f;
   std::vector<float> steering_command(result->points()->size(), 0.0f);
-  if (params_.maximum < epsilon) {
+  if (max_value < epsilon) {
     result->set_metric(index(), steering_command);
     return;
   }
@@ -46,16 +47,10 @@ void SteeringConsistency::evaluate(
     const auto previous = utils::steer_command(result->previous(), point.pose, wheel_base);
 
     steering_command.at(i) =
-      std::min(1.0f, static_cast<float>(std::abs(current - previous) / params_.maximum));
+      std::min(1.0f, static_cast<float>(std::abs(current - previous)) / max_value);
   }
 
   result->set_metric(index(), steering_command);
-}
-
-void SteeringConsistency::setup_parameters(
-  const trajectory_ranker_params::Params::Evaluation & params)
-{
-  params_ = params.steering_consistency;
 }
 
 }  // namespace autoware::trajectory_ranker::metrics

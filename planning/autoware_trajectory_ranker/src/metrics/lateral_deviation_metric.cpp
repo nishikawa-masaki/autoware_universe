@@ -27,7 +27,8 @@ namespace autoware::trajectory_ranker::metrics
 {
 
 void LateralDeviation::evaluate(
-  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result) const
+  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
+  const float max_value) const
 {
   const auto points = result->points();
   if (!points || points->empty()) {
@@ -37,7 +38,7 @@ void LateralDeviation::evaluate(
   constexpr float epsilon = 1.0e-3f;
   std::vector<float> deviations(points->size(), 0.0f);
 
-  if (params_.maximum < epsilon) {
+  if (max_value < epsilon) {
     result->set_metric(index(), deviations);
     return;
   }
@@ -52,15 +53,10 @@ void LateralDeviation::evaluate(
     const auto arc_coordinates = autoware::experimental::lanelet2_utils::get_arc_coordinates(
       *preferred_lanes, autoware_utils_geometry::get_pose(points->at(i)));
     deviations.at(i) =
-      std::min(1.0f, static_cast<float>(std::abs(arc_coordinates.distance) / params_.maximum));
+      std::min(1.0f, static_cast<float>(std::abs(arc_coordinates.distance)) / max_value);
   }
 
   result->set_metric(index(), deviations);
-}
-
-void LateralDeviation::setup_parameters(const trajectory_ranker_params::Params::Evaluation & params)
-{
-  params_ = params.lateral_deviation;
 }
 
 }  // namespace autoware::trajectory_ranker::metrics

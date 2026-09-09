@@ -16,7 +16,6 @@
 #define AUTOWARE__TRAJECTORY_PROCESSOR__TRAJECTORY_MODIFIER_UTILS__OBSTACLE_STOP_UTILS_HPP_
 
 #include <autoware/object_recognition_utils/object_classification.hpp>
-#include <autoware/point_types/types.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <rclcpp/time.hpp>
@@ -31,8 +30,16 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_hash.hpp>
 
+#include <pcl/filters/crop_box.h>
+#include <pcl/filters/crop_hull.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl/surface/convex_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <memory>
@@ -44,10 +51,8 @@
 
 namespace autoware::trajectory_processor::utils::obstacle_stop
 {
-using autoware::point_types::PointCloudClassification;
-using autoware::point_types::PointXYZCPE;
 using sensor_msgs::msg::PointCloud2;
-using PointCloud = pcl::PointCloud<PointXYZCPE>;
+using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -66,28 +71,15 @@ enum class ObjectType : uint8_t {
   BICYCLE,
   PEDESTRIAN,
   ANIMAL,
-  HAZARD,
-  FLAT_SURFACE,
-  STRUCTURE,
-  VEGETATION,
-  NOISE,
+  HAZARD
 };
 
 inline static const std::unordered_map<std::string, ObjectType> string_to_object_type = {
-  {"unknown", ObjectType::UNKNOWN},
-  {"car", ObjectType::CAR},
-  {"truck", ObjectType::TRUCK},
-  {"bus", ObjectType::BUS},
-  {"trailer", ObjectType::TRAILER},
-  {"motorcycle", ObjectType::MOTORCYCLE},
-  {"bicycle", ObjectType::BICYCLE},
-  {"pedestrian", ObjectType::PEDESTRIAN},
-  {"animal", ObjectType::ANIMAL},
-  {"hazard", ObjectType::HAZARD},
-  {"flat_surface", ObjectType::FLAT_SURFACE},
-  {"structure", ObjectType::STRUCTURE},
-  {"vegetation", ObjectType::VEGETATION},
-  {"noise", ObjectType::NOISE}};
+  {"unknown", ObjectType::UNKNOWN}, {"car", ObjectType::CAR},
+  {"truck", ObjectType::TRUCK},     {"bus", ObjectType::BUS},
+  {"trailer", ObjectType::TRAILER}, {"motorcycle", ObjectType::MOTORCYCLE},
+  {"bicycle", ObjectType::BICYCLE}, {"pedestrian", ObjectType::PEDESTRIAN},
+  {"animal", ObjectType::ANIMAL},   {"hazard", ObjectType::HAZARD}};
 
 inline static const std::unordered_map<uint8_t, ObjectType> classification_to_object_type = {
   {ObjectClassification::UNKNOWN, ObjectType::UNKNOWN},
@@ -100,22 +92,6 @@ inline static const std::unordered_map<uint8_t, ObjectType> classification_to_ob
   {ObjectClassification::PEDESTRIAN, ObjectType::PEDESTRIAN},
   {ObjectClassification::ANIMAL, ObjectType::ANIMAL},
   {ObjectClassification::HAZARD, ObjectType::HAZARD}};
-
-inline static const std::unordered_map<PointCloudClassification, ObjectType>
-  pcd_class_to_object_type = {
-    {PointCloudClassification::CAR, ObjectType::CAR},
-    {PointCloudClassification::TRUCK, ObjectType::TRUCK},
-    {PointCloudClassification::BUS, ObjectType::BUS},
-    {PointCloudClassification::MOTORCYCLE, ObjectType::MOTORCYCLE},
-    {PointCloudClassification::BICYCLE, ObjectType::BICYCLE},
-    {PointCloudClassification::PEDESTRIAN, ObjectType::PEDESTRIAN},
-    {PointCloudClassification::ANIMAL, ObjectType::ANIMAL},
-    {PointCloudClassification::HAZARD, ObjectType::HAZARD},
-    {PointCloudClassification::FLAT_SURFACE, ObjectType::FLAT_SURFACE},
-    {PointCloudClassification::STRUCTURE, ObjectType::STRUCTURE},
-    {PointCloudClassification::VEGETATION, ObjectType::VEGETATION},
-    {PointCloudClassification::NOISE, ObjectType::NOISE},
-    {PointCloudClassification::INVALID, ObjectType::UNKNOWN}};
 
 struct CollisionPoint
 {
@@ -173,6 +149,7 @@ struct TrajectoryShape
 
 struct DebugData
 {
+  PointCloud2::SharedPtr cluster_points;
   PointCloud2::SharedPtr filtered_points;
   PredictedObjects filtered_objects;
   MultiPolygon2d target_polygons;
@@ -363,41 +340,55 @@ private:
   double safety_buffer_;
 };
 
-/// Range and semantic-label filtering plus object masking for obstacle point clouds.
+/// PCL-based downsampling, cropping, clustering, and object masking for obstacle point clouds.
 struct PointCloudFilter
 {
   /**
-   * @brief Configure the set of point-cloud class labels kept by subsequent filters.
+   * @brief Configure voxel grid and euclidean clustering parameters used by subsequent filters.
    */
-  explicit PointCloudFilter(const std::vector<std::string> & target_types)
+  PointCloudFilter(
+    double voxel_size_x, double voxel_size_y, double voxel_size_z, int voxel_min_size,
+    double cluster_tolerance, int cluster_min_size, int cluster_max_size)
   {
-    for (const auto & target_type : target_types) {
-      if (string_to_object_type.count(target_type) == 0) continue;
-      pcd_types_.emplace(string_to_object_type.at(target_type));
-    }
+    tree_ = std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>();
+    ec_.setClusterTolerance(cluster_tolerance);
+    ec_.setMinClusterSize(cluster_min_size);
+    ec_.setMaxClusterSize(cluster_max_size);
+    voxel_grid_.setLeafSize(voxel_size_x, voxel_size_y, voxel_size_z);
+    voxel_grid_.setMinimumPointsNumberPerVoxel(voxel_min_size);
+    convex_hull_.setDimension(2);
   };
 
   /**
-   * @brief Update the kept point-cloud class labels at runtime.
+   * @brief Update voxel and clustering parameters at runtime.
    */
-  void set_params(const std::vector<std::string> & target_types)
+  void set_params(
+    double voxel_size_x, double voxel_size_y, double voxel_size_z, int voxel_min_size,
+    double cluster_tolerance, int cluster_min_size, int cluster_max_size)
   {
-    pcd_types_.clear();
-    for (const auto & target_type : target_types) {
-      if (string_to_object_type.count(target_type) == 0) continue;
-      pcd_types_.emplace(string_to_object_type.at(target_type));
-    }
+    voxel_grid_.setLeafSize(voxel_size_x, voxel_size_y, voxel_size_z);
+    voxel_grid_.setMinimumPointsNumberPerVoxel(voxel_min_size);
+    ec_.setClusterTolerance(cluster_tolerance);
+    ec_.setMinClusterSize(cluster_min_size);
+    ec_.setMaxClusterSize(cluster_max_size);
   }
 
   /**
-   * @brief Crop the cloud to an axis-aligned box, then keep only configured class types.
+   * @brief Crop the cloud to an axis-aligned box, then apply voxel grid downsampling.
    * @param[in,out] pointcloud Cloud updated in place; empty if nothing remains.
    * @param min_x,max_x,min_y,max_y,min_z,max_z Crop box bounds in the cloud frame.
    */
   void filter_pointcloud(
     PointCloud::Ptr & pointcloud, const double min_x, const double max_x, const double min_y,
     const double max_y, const double min_z, const double max_z);
-
+  /**
+   * @brief Cluster the cloud and output 2D convex hull vertices of clusters above a height cutoff.
+   * @param input Downsampled or cropped cloud.
+   * @param[out] output Hull vertices of qualifying clusters (typically for footprint tests).
+   * @param min_height A cluster is kept only if at least one point has z >= this value [m].
+   */
+  void cluster_pointcloud(
+    const PointCloud::Ptr & input, PointCloud::Ptr & output, const double min_height);
   /**
    * @brief Remove points that lie inside predicted object footprints (expanded by a small margin).
    * @param[in,out] pointcloud Cloud to strip in place.
@@ -406,7 +397,11 @@ struct PointCloudFilter
   void filter_pointcloud_by_object(PointCloud::Ptr & pointcloud, const PredictedObjects & objects);
 
 private:
-  std::unordered_set<ObjectType> pcd_types_;
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree_;
+  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec_;
+  pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
+  pcl::CropBox<pcl::PointXYZ> crop_box_;
+  pcl::ConvexHull<pcl::PointXYZ> convex_hull_;
 };
 
 /// Temporal association of obstacle detections (objects and points) with hysteresis.
@@ -505,9 +500,9 @@ private:
 
   struct PersistentPoint : public PersistentObstacle
   {
-    PointXYZCPE point;
-    explicit PersistentPoint(const PointXYZCPE & point, const rclcpp::Time & now)
-    : PersistentObstacle(now), point(point)
+    geometry_msgs::msg::Point position;
+    explicit PersistentPoint(const geometry_msgs::msg::Point & position, const rclcpp::Time & now)
+    : PersistentObstacle(now), position(position)
     {
     }
   };

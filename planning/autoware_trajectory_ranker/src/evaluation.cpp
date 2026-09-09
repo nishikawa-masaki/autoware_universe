@@ -25,11 +25,12 @@
 namespace autoware::trajectory_ranker
 {
 
-void Evaluator::load_metric(const std::string & name, const size_t index)
+void Evaluator::load_metric(
+  const std::string & name, const size_t index, const double time_resolution)
 {
   try {
     auto plugin = plugin_loader_.createSharedInstance(name);
-    plugin->init(vehicle_info_, params_, node_ptr_);
+    plugin->init(vehicle_info_, time_resolution, node_ptr_);
     plugin->set_index(index);
 
     for (const auto & p : plugins_) {
@@ -39,8 +40,6 @@ void Evaluator::load_metric(const std::string & name, const size_t index)
       }
     }
     plugins_.push_back(plugin);
-    params_.time_decay_weight.push_back(plugin->decay_weights());
-    params_.score_weight.push_back(plugin->weight());
     RCLCPP_INFO_STREAM(logger_, "The scene plugin '" << name << "' is loaded.");
   } catch (const pluginlib::CreateClassException & e) {
     RCLCPP_ERROR_STREAM(
@@ -66,18 +65,19 @@ void Evaluator::unload_metric(const std::string & name)
   }
 }
 
-void Evaluator::evaluate()
+void Evaluator::evaluate(const std::vector<float> & max_value)
 {
   for (const auto & result : results_) {
     for (const auto & plugin : plugins_) {
-      plugin->evaluate(result);
+      if (plugin->index() < max_value.size()) {
+        plugin->evaluate(result, max_value.at(plugin->index()));
+      }
     }
   }
 }
 
-void Evaluator::normalize()
+void Evaluator::normalize(const std::vector<std::vector<float>> & weight)
 {
-  const auto weight = params_.time_decay_weight;
   if (results_.empty()) return;
 
   if (results_.size() < 2) {
@@ -102,20 +102,14 @@ void Evaluator::normalize()
   }
 }
 
-void Evaluator::compress()
+void Evaluator::compress(const std::vector<std::vector<float>> & weight)
 {
-  std::vector<std::vector<float>> weight;
-  weight.reserve(params_.time_decay_weight.size());
-  for (const auto & w : params_.time_decay_weight) {
-    weight.emplace_back(w.begin(), w.end());
-  }
   std::for_each(
     results_.begin(), results_.end(), [&weight](auto & data) { data->compress(weight); });
 }
 
-void Evaluator::weighting()
+void Evaluator::weighting(const std::vector<float> & weight)
 {
-  const auto weight = std::vector<float>(params_.score_weight.begin(), params_.score_weight.end());
   std::for_each(
     results_.begin(), results_.end(), [&weight](auto & data) { data->weighting(weight); });
 
@@ -145,13 +139,22 @@ void Evaluator::setup(const std::shared_ptr<TrajectoryPoints> & previous_points)
   }
 }
 
-std::shared_ptr<DataInterface> Evaluator::best(const std::string & exclude)
+std::shared_ptr<DataInterface> Evaluator::best(
+  const std::shared_ptr<EvaluatorParameters> & parameters, const std::string & exclude)
 {
-  evaluate();
-  compress();
-  normalize();
-  weighting();
+  evaluate(parameters->metrics_max_value);
 
+  compress(parameters->time_decay_weight);
+
+  normalize(parameters->time_decay_weight);
+
+  weighting(parameters->score_weight);
+
+  return best(exclude);
+}
+
+std::shared_ptr<DataInterface> Evaluator::best(const std::string & exclude) const
+{
   if (results_.empty()) return nullptr;
 
   const auto itr = std::find_if(results_.begin(), results_.end(), [&exclude](const auto & result) {
@@ -160,34 +163,5 @@ std::shared_ptr<DataInterface> Evaluator::best(const std::string & exclude)
   if (results_.end() == itr) return nullptr;
 
   return *itr;
-}
-
-double Evaluator::score(const std::shared_ptr<CoreData> & core_data)
-{
-  // evaluate the core data
-  const auto ptr = std::make_shared<DataInterface>(core_data, plugins_.size());
-  for (const auto & plugin : plugins_) {
-    plugin->evaluate(ptr);
-  }
-
-  // compress
-  std::vector<std::vector<float>> decay_weight;
-  decay_weight.reserve(params_.time_decay_weight.size());
-  for (const auto & w : params_.time_decay_weight) {
-    decay_weight.emplace_back(w.begin(), w.end());
-  }
-  ptr->compress(decay_weight);
-
-  // normalize
-  for (const auto & plugin : plugins_) {
-    ptr->normalize(0.0f, ptr->score(plugin->index()), plugin->index());
-  }
-
-  // weighting
-  const auto score_weight =
-    std::vector<float>(params_.score_weight.begin(), params_.score_weight.end());
-  ptr->weighting(score_weight);
-
-  return ptr->total();
 }
 }  // namespace autoware::trajectory_ranker

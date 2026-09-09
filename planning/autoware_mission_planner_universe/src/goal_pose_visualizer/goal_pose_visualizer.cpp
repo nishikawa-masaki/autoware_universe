@@ -14,27 +14,25 @@
 
 #include "goal_pose_visualizer.hpp"
 
-#include <utility>
-
 namespace autoware::mission_planner_universe
 {
 GoalPoseVisualizer::GoalPoseVisualizer(const rclcpp::NodeOptions & node_options)
 : Node("goal_pose_visualizer", node_options)
 {
-  sub_route_ = create_subscription<LaneletRoute>(
+  sub_route_ = create_subscription<autoware_planning_msgs::msg::LaneletRoute>(
     "input/route", rclcpp::QoS{1}.transient_local(),
     std::bind(&GoalPoseVisualizer::echo_back_route_callback, this, std::placeholders::_1));
-  pub_goal_pose_ =
-    create_publisher<PoseStamped>("output/goal_pose", rclcpp::QoS{1}.transient_local());
+  pub_goal_pose_ = create_publisher<geometry_msgs::msg::PoseStamped>(
+    "output/goal_pose", rclcpp::QoS{1}.transient_local());
 }
 
 void GoalPoseVisualizer::echo_back_route_callback(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) & msg)
+  const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr msg)
 {
-  auto goal_pose = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_goal_pose_);
-  goal_pose->header = msg->header;
-  goal_pose->pose = msg->goal_pose;
-  pub_goal_pose_->publish(std::move(goal_pose));
+  geometry_msgs::msg::PoseStamped goal_pose;
+  goal_pose.header = msg->header;
+  goal_pose.pose = msg->goal_pose;
+  pub_goal_pose_->publish(goal_pose);
 }
 }  // namespace autoware::mission_planner_universe
 

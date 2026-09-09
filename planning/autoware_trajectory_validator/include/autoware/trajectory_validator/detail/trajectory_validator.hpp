@@ -21,8 +21,6 @@
 #include "autoware_trajectory_validator/autoware_trajectory_validator_param.hpp"
 
 #include <memory>
-#include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -63,7 +61,6 @@ public:
    */
   [[nodiscard]] TrajectoryValidatorReport process(
     const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
-    const std::unordered_set<std::string> & active_filter_names,
     const ValidatorContext & context) const;
 
 private:

@@ -15,8 +15,6 @@
 #ifndef GOAL_POSE_VISUALIZER__GOAL_POSE_VISUALIZER_HPP_
 #define GOAL_POSE_VISUALIZER__GOAL_POSE_VISUALIZER_HPP_
 
-#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
-#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
@@ -24,19 +22,17 @@
 
 namespace autoware::mission_planner_universe
 {
-class GoalPoseVisualizer : public autoware::agnocast_wrapper::Node
+class GoalPoseVisualizer : public rclcpp::Node
 {
 public:
   explicit GoalPoseVisualizer(const rclcpp::NodeOptions & node_options);
 
 private:
-  using LaneletRoute = autoware_planning_msgs::msg::LaneletRoute;
-  using PoseStamped = geometry_msgs::msg::PoseStamped;
+  rclcpp::Subscription<autoware_planning_msgs::msg::LaneletRoute>::SharedPtr sub_route_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub_goal_pose_;
 
-  AUTOWARE_SUBSCRIPTION_PTR(LaneletRoute) sub_route_;
-  AUTOWARE_PUBLISHER_PTR(PoseStamped) pub_goal_pose_;
-
-  void echo_back_route_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) & msg);
+  void echo_back_route_callback(
+    const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr msg);
 };
 
 }  // namespace autoware::mission_planner_universe

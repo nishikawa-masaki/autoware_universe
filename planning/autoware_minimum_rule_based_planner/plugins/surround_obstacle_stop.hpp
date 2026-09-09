@@ -18,7 +18,6 @@
 #include "autoware/obstacle_proximity_checker/obstacle_proximity_checker.hpp"
 #include "plugin_interface.hpp"
 
-#include <autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -34,7 +33,6 @@ namespace autoware::minimum_rule_based_planner::plugin
 using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware::trajectory_processor::utils::obstacle_stop::PointCloud;
 
 class SurroundObstacleStop : public PluginInterface
 {
@@ -54,7 +52,6 @@ private:
   MinimumRuleBasedPlannerParams::SurroundObstacleStop params_;
 
   std::unique_ptr<obstacle_proximity_checker::ProximityChecker> proximity_checker_;
-  std::unique_ptr<trajectory_processor::utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
 
   std::optional<obstacle_proximity_checker::CheckResult> proximity_check_result_;
 
