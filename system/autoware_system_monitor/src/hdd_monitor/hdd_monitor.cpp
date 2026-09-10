@@ -233,6 +233,8 @@ bool is_non_scsi_device(const std::string & device_name)
   // clang-format on
 }
 
+// cspell:disable
+// clang-format off
 /**
  * @brief resolve a mounted source path to the underlying physical block device
  * @param [in] device device path taken from the mount point, e.g. "/dev/mapper/crypt-root"
@@ -241,6 +243,8 @@ bool is_non_scsi_device(const std::string & device_name)
  * e.g. a LUKS encrypted volume, the first entry of its "slaves" directory in sysfs
  * gives the block device the mapping is built on.
  */
+// cspell:enable
+// clang-format on
 std::string resolve_block_device_path(const std::string & device)
 {
   if (device.empty()) {
@@ -1075,11 +1079,15 @@ void HddMonitor::updateHddConnections()
       if (std::filesystem::exists(hdd_param.second.part_device_, ec)) {
         hdd_connected_flags_[hdd_param.first] = true;
 
+        // cspell:disable
+        // clang-format off
         // Resolve the mounted source to the physical block device it is backed by,
         // e.g. "/dev/mapper/crypt-root" of a LUKS encrypted volume to "/dev/nvme0n1p3".
         // The monitor needs the physical device name itself because readSysfsDeviceStat()
         // reads /sys/block/<device>/stat, and hdd_reader needs it to access S.M.A.R.T.
         // information.
+        // cspell:enable
+        // clang-format on
         const std::string block_device = resolve_block_device_path(hdd_param.second.part_device_);
 
         // Remove index number of partition for passing device name to hdd_reader
