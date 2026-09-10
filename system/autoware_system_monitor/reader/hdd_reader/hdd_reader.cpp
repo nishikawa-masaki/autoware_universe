@@ -44,7 +44,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <regex>
@@ -61,46 +60,6 @@ struct ReadContext
 };
 
 constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
-
-std::string resolve_block_device_path(const std::string & device)
-{
-  if (device.empty()) {
-    return {};
-  }
-
-  std::error_code ec;
-  const auto canonical = std::filesystem::weakly_canonical(device, ec);
-  if (ec || canonical.empty()) {
-    return device;
-  }
-
-  const auto resolved = canonical.string();
-  if (resolved.rfind("/dev/dm-", 0) != 0) {
-    return resolved;
-  }
-
-  const auto block_name = std::filesystem::path(resolved).filename().string();
-  const auto slaves_dir = std::filesystem::path("/sys/class/block") / block_name / "slaves";
-  std::error_code slaves_ec;
-  if (
-    !std::filesystem::exists(slaves_dir, slaves_ec) ||
-    !std::filesystem::is_directory(slaves_dir, slaves_ec)) {
-    return resolved;
-  }
-
-  for (const auto & entry : std::filesystem::directory_iterator(slaves_dir, slaves_ec)) {
-    if (slaves_ec) {
-      break;
-    }
-
-    const auto name = entry.path().filename().string();
-    if (!name.empty()) {
-      return "/dev/" + name;
-    }
-  }
-
-  return resolved;
-}
 
 /**
  * @brief exchanges the values of 2 bytes
@@ -493,18 +452,16 @@ HddInfo read_nvme_hdd_info(int fd, HddInfo * info)
 HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
 {
   HddInfo info{};
-  const auto resolved_name = resolve_block_device_path(hdd_device.name_);
-  const auto open_name = resolved_name.empty() ? hdd_device.name_ : resolved_name;
 
-  int fd = open(open_name.c_str(), O_RDONLY);
+  int fd = open(hdd_device.name_.c_str(), O_RDONLY);
   if (fd < 0) {
     info.error_code_ = errno;
     syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
     return info;
   }
 
-  const bool is_ata = boost::starts_with(open_name, "/dev/sd");
-  const bool is_nvme = boost::starts_with(open_name, "/dev/nvme");
+  const bool is_ata = boost::starts_with(hdd_device.name_, "/dev/sd");
+  const bool is_nvme = boost::starts_with(hdd_device.name_, "/dev/nvme");
 
   if (is_ata) {
     info = read_ata_hdd_info(fd, &info, hdd_device);
@@ -552,13 +509,7 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
   }
 
   for (const auto & hdd_device : hdd_devices) {
-    const auto resolved_name = resolve_block_device_path(hdd_device.name_);
-    HddInfo info = read_hdd_info_for_device(hdd_device);
-
-    list[hdd_device.name_] = info;
-    if (!resolved_name.empty() && resolved_name != hdd_device.name_) {
-      list[resolved_name] = info;
-    }
+    list[hdd_device.name_] = read_hdd_info_for_device(hdd_device);
   }
 
   oa << list;

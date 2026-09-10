@@ -233,6 +233,54 @@ bool is_non_scsi_device(const std::string & device_name)
   // clang-format on
 }
 
+/**
+ * @brief resolve a mounted source path to the underlying physical block device
+ * @param [in] device device path taken from the mount point, e.g. "/dev/mapper/crypt-root"
+ * @return path of the underlying block device, e.g. "/dev/nvme0n1p3"
+ * @note Symbolic links are resolved first. When the result is a device mapper device,
+ * e.g. a LUKS encrypted volume, the first entry of its "slaves" directory in sysfs
+ * gives the block device the mapping is built on.
+ */
+std::string resolve_block_device_path(const std::string & device)
+{
+  if (device.empty()) {
+    return {};
+  }
+
+  std::error_code ec;
+  const auto canonical = std::filesystem::weakly_canonical(device, ec);
+  if (ec || canonical.empty()) {
+    return device;
+  }
+
+  const auto resolved = canonical.string();
+  if (resolved.rfind("/dev/dm-", 0) != 0) {
+    return resolved;
+  }
+
+  const auto block_name = std::filesystem::path(resolved).filename().string();
+  const auto slaves_dir = std::filesystem::path("/sys/class/block") / block_name / "slaves";
+  std::error_code slaves_ec;
+  if (
+    !std::filesystem::exists(slaves_dir, slaves_ec) ||
+    !std::filesystem::is_directory(slaves_dir, slaves_ec)) {
+    return resolved;
+  }
+
+  for (const auto & entry : std::filesystem::directory_iterator(slaves_dir, slaves_ec)) {
+    if (slaves_ec) {
+      break;
+    }
+
+    const auto name = entry.path().filename().string();
+    if (!name.empty()) {
+      return "/dev/" + name;
+    }
+  }
+
+  return resolved;
+}
+
 inline bool is_octal_digit(char c)
 {
   return c >= '0' && c <= '7';
@@ -1027,19 +1075,22 @@ void HddMonitor::updateHddConnections()
       if (std::filesystem::exists(hdd_param.second.part_device_, ec)) {
         hdd_connected_flags_[hdd_param.first] = true;
 
-        // Remove partition suffix when the mounted source is a direct partition device.
-        // For symlinked or mapper-backed device paths, hdd_reader resolves the final block device
-        // before SMART access, keeping this callback focused on connection checks.
-        if (boost::starts_with(hdd_param.second.part_device_, "/dev/sd")) {
+        // Resolve the mounted source to the physical block device it is backed by,
+        // e.g. "/dev/mapper/crypt-root" of a LUKS encrypted volume to "/dev/nvme0n1p3".
+        // The monitor needs the physical device name itself because readSysfsDeviceStat()
+        // reads /sys/block/<device>/stat, and hdd_reader needs it to access S.M.A.R.T.
+        // information.
+        const std::string block_device = resolve_block_device_path(hdd_param.second.part_device_);
+
+        // Remove index number of partition for passing device name to hdd_reader
+        if (boost::starts_with(block_device, "/dev/sd")) {
           const std::regex pattern("\\d+$");
-          hdd_param.second.disk_device_ =
-            std::regex_replace(hdd_param.second.part_device_, pattern, "");
-        } else if (is_non_scsi_device(hdd_param.second.part_device_)) {
+          hdd_param.second.disk_device_ = std::regex_replace(block_device, pattern, "");
+        } else if (is_non_scsi_device(block_device)) {
           const std::regex pattern("p\\d+$");
-          hdd_param.second.disk_device_ =
-            std::regex_replace(hdd_param.second.part_device_, pattern, "");
+          hdd_param.second.disk_device_ = std::regex_replace(block_device, pattern, "");
         } else {
-          hdd_param.second.disk_device_ = hdd_param.second.part_device_;
+          hdd_param.second.disk_device_ = block_device;
         }
 
         const std::regex raw_pattern(".*/");
