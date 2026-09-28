@@ -238,6 +238,27 @@ int check_sg_io_result(const sg_io_hdr_t & hdr, const char * command_name)
 }
 
 /**
+ * @brief check the result of an NVMe admin command and log it if the device rejected it
+ * @param [in] ret value returned by ioctl(NVME_IOCTL_ADMIN_CMD), must not be negative
+ * @param [in] command_name name of the command to log
+ * @return 0 when the device has executed the command, otherwise error
+ * @note ioctl(NVME_IOCTL_ADMIN_CMD) has three outcomes. A negative value means that the
+ * command never reached the device and errno is set, zero means that the controller completed
+ * it with Successful Completion, and a positive value is the status the controller answered
+ * with. A rejected command leaves the data buffer untouched.
+ */
+int check_nvme_admin_result(int ret, const char * command_name)
+{
+  if (ret == 0) {
+    return EXIT_SUCCESS;
+  }
+
+  syslog(LOG_ERR, "The device rejected %s. status=0x%04X\n", command_name, ret);
+
+  return EIO;
+}
+
+/**
  * @brief get IDENTIFY DEVICE for ATA drive
  * @param [in] fd file descriptor to device
  * @param [out] info a pointer to HDD information
@@ -414,6 +435,13 @@ int get_nvme_identify(int fd, HddInfo * info)
     return errno;
   }
 
+  // A rejected command leaves the data buffer untouched, the fields below would all be read
+  // from zeroed memory
+  const int status = check_nvme_admin_result(ret, "Identify");
+  if (status != EXIT_SUCCESS) {
+    return status;
+  }
+
   // Identify Controller Data Structure
   // Bytes 23:04 Serial Number (SN)
   info->serial_ = sanitize_device_string(data + 4, 20);
@@ -451,6 +479,13 @@ int get_nvme_smart_data(int fd, HddInfo * info)
   int ret = ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
   if (ret < 0) {
     return errno;
+  }
+
+  // A rejected command leaves the data buffer untouched, the values below would all be read
+  // from zeroed memory and 0 DegC would be reported as a measured temperature
+  const int status = check_nvme_admin_result(ret, "Get Log Page");
+  if (status != EXIT_SUCCESS) {
+    return status;
   }
 
   // Bytes 2:1 Composite Temperature
@@ -686,6 +721,7 @@ void run(const std::string & socket_path)
     }
 
     // Receive list of device from a socket
+    // If there are many devices, the buffer may not be enough and the data may be cut off.
     char buf[1024]{};
     const int received = recv(new_sock, buf, sizeof(buf) - 1, 0);
     ret = received;
