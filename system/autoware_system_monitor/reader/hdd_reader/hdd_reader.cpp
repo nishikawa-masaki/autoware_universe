@@ -469,8 +469,8 @@ HddInfo read_hdd_info_for_device(const HddDevice & hdd_device)
     info = read_nvme_hdd_info(fd, &info);
   }
 
-  info.error_code_ = close(fd);
-  if (info.error_code_ < 0) {
+  int ret_close = close(fd);
+  if (ret_close != 0) {
     info.error_code_ = errno;
     syslog(LOG_ERR, "Failed to close the file descriptor FD. %s\n", strerror(info.error_code_));
   }
